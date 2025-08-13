@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server';
 
-import Product from '@/models/product';
+import Sale from '@/models/sale';
 import { getServerSession } from 'next-auth';
 import { dbConnect } from '@/lib/db/dbConnect';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 
 
-
 export async function GET() {
   try {
     await dbConnect();
-    const products = await Product.find();
-    
-    
-    return NextResponse.json(products);
+    const sales = await Sale.find({}).populate('items.product');
+    return NextResponse.json(sales);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch sales' }, { status: 500 });
   }
 }
 
@@ -26,10 +23,10 @@ export async function POST(request: Request) {
 
     await dbConnect();
     const data = await request.json();
-    const product = new Product(data);
-    await product.save();
-    return NextResponse.json(product, { status: 201 });
+    const sale = new Sale(data);
+    await sale.save();
+    return NextResponse.json(sale, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 });
   }
 }
