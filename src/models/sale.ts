@@ -11,6 +11,7 @@ const saleSchema = new Schema({
   items: [saleItemSchema],
   subtotal: { type: Number, required: true },
   tax: { type: Number, required: true },
+  discount: { type: Number, default:0 },
   total: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
   customer: { type: String },
