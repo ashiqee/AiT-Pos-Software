@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../[...nextauth]/authOptions";
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+import userModel from "@/models/user.model";
 
 
 
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const allowedRoles = ['admin', 'super-admin', 'guest', 'teacher'];
 
-  if (!session || !allowedRoles.includes(session.user.role)) {
+  if (!session || !allowedRoles.includes(session.userData.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
     query.role = { $regex: role, $options: "i" };
   }
 
-  const teachers = await user.find(query).select("name _id"); // ✅ fixed select syntax
-  const total = await user.countDocuments(query);
+  const teachers = await userModel.find(query).select("name _id"); // ✅ fixed select syntax
+  const total = await userModel.countDocuments(query);
 
   return NextResponse.json({ users: teachers, total }, { status: 200 });
 }

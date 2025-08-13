@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../[...nextauth]/authOptions";
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+import userModel from "@/models/user.model";
 
 
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
   const allowedRoles = ['admin', 'super-admin'];
 
-  if (!session || !allowedRoles.includes(session.user.role)) {
+  if (!session || !allowedRoles.includes(session.userData.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   // Check if a user already exists with the same email
   if (email) {
-    const existingEmailUser = await user.findOne({ email });
+    const existingEmailUser = await userModel.findOne({ email });
     if (existingEmailUser) {
       return NextResponse.json(
         { error: "Email already exists" },
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   // Check if a user already exists with the same studentId
   if (studentId) {
-    const existingStudentUser = await user.findOne({ studentId });
+    const existingStudentUser = await userModel.findOne({ studentId });
     if (existingStudentUser) {
       return NextResponse.json(
         { error: "Student ID already exists" },
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Create a new user in the database
-  const newUser = await user.create({
+  const newUser = await userModel.create({
     name,
     email,
     studentId,
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 
   const allowedRoles = ['admin', 'super-admin', 'guest', 'teacher'];
 
-  if (!session || !allowedRoles.includes(session.user.role)) {
+  if (!session || !allowedRoles.includes(session.userData.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -111,8 +111,8 @@ export async function GET(req: NextRequest) {
   }),
 };
 
-  const users = await user.find(query).skip(skip).limit(limit);
-  const total = await user.countDocuments(query);
+  const users = await userModel.find(query).skip(skip).limit(limit);
+  const total = await userModel.countDocuments(query);
 
   return NextResponse.json({ users, total }, { status: 200 });
 }

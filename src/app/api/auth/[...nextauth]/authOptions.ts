@@ -4,7 +4,9 @@ import bcrypt from "bcryptjs";
 
 
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+import userModel from "@/models/user.model";
+
+
 
 // Auth options configuration
 export const authOptions:NextAuthOptions = {
@@ -29,7 +31,7 @@ export const authOptions:NextAuthOptions = {
         await dbConnect();
 
         // Find the user by email or studentId
-        const user = await user.findOne({
+        const user = await userModel.findOne({
           $or: [
             { email: credentials.identifier },
             { mobileNo: credentials.identifier },

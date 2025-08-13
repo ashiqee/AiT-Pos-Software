@@ -49,12 +49,12 @@ const LoginPage = () => {
       toast.success("Login successful", { id: toastId });
 
       const session = await getSession();
-      const role = session?.user?.role;
+      // const role = session?.user?.role;
 
       if (redirect) {
         router.push(redirect);
       } else {
-        router.push("/");
+        router.push("/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -71,7 +71,7 @@ const LoginPage = () => {
       <motion.div animate={{ y: [-200, 100, 0] }}>
         <Card
           isBlurred
-          className="border-none max-w-[40vw] mx-auto bg-background/60 dark:text-white text-primary dark:bg-default-100/50 "
+          className="border-none md:max-w-[40vw] mx-auto bg-background/60 dark:text-white text-primary dark:bg-default-100/50 "
           shadow="md"
         >
           <CardBody className="p-10  md:p-20 2xl:px-40">

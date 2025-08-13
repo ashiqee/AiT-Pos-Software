@@ -5,8 +5,8 @@ import { Types } from "mongoose";
 import { authOptions } from "../../[...nextauth]/authOptions";
 import { dbConnect } from "@/lib/db/dbConnect";
 import { getServerSession } from "next-auth";
-import user from "@/models/user";
 
+import userModel from "@/models/user.model";
 
 
 
@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
  
    const allowedRoles = ['admin', 'super-admin'];
  
-   if (!session || !allowedRoles.includes(session.user.role)) {
+   if (!session || !allowedRoles.includes(session?.userData.role)) {
      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
    }
  
@@ -30,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const updates = await req.json();
 
-    const updatedUser = await user.findByIdAndUpdate(id, updates, {
+    const updatedUser = await userModel.findByIdAndUpdate(id, updates, {
       new: true,
       runValidators: true,
     });
@@ -52,7 +52,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
  
    const allowedRoles = ['admin', 'super-admin'];
  
-   if (!session || !allowedRoles.includes(session.user.role)) {
+   if (!session || !allowedRoles.includes(session.userData.role)) {
      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
    }
   
@@ -64,7 +64,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
 
-    const deleted = await user.findByIdAndDelete(id);
+    const deleted = await userModel.findByIdAndDelete(id);
 
     if (!deleted) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 
 
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+
+import userModel from "@/models/user.model";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +24,13 @@ export async function POST(req: NextRequest) {
     
 
     // Check if email already exists
-    const existingEmail = await user.findOne({ email });
+    const existingEmail = await userModel.findOne({ email });
     if (existingEmail) {
       return NextResponse.json({ message: "Email already exists" }, { status: 409 });
     }
 
     // Check if mobile number already exists
-    const existingMobile = await user.findOne({ mobileNo });
+    const existingMobile = await userModel.findOne({ mobileNo });
     if (existingMobile) {
       return NextResponse.json({ message: "Mobile number already exists" }, { status: 409 });
     }
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
      // Hash Password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new user({ name, email, password:hashedPassword, role, mobileNo });
+    const newUser = new userModel({ name, email, password:hashedPassword, role, mobileNo });
     await newUser.save();
 
     return NextResponse.json({ message: "Registration successful" }, { status: 201 });

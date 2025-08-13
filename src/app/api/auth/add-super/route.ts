@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+import userModel from "@/models/user.model";
 
 
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Check if Super Admin already exists
-    const existingSuperAdmin = await user.findOne({ email: email });
+    const existingSuperAdmin = await userModel.findOne({ email: email });
     if (existingSuperAdmin) {
       return NextResponse.json({ error: "Super Admin already exists" }, { status: 400 });
     }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create Super Admin
-    const newUser = await user.create({
+    const newUser = await userModel.create({
       name,
       email,
       password: hashedPassword,

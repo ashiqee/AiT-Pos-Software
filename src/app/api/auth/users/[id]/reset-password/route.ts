@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db/dbConnect";
 import jwt from "jsonwebtoken";
 
-import user from "@/models/user";
+import userModel from "@/models/user.model";
 
 // import { sendEmail } from "@/lib/utils/email/sendEmail";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     await dbConnect();
 
-    const userData = await user.findById(params.id);
+    const userData = await userModel.findById(params.id);
     if (!userData || !userData.email) {
       return NextResponse.json({ error: "User not found or missing email" }, { status: 404 });
     }

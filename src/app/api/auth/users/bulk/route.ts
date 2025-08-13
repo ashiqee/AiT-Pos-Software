@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../[...nextauth]/authOptions";
 import { dbConnect } from "@/lib/db/dbConnect";
-import user from "@/models/user";
+import userModel from "@/models/user.model";
 
 export async function POST(req: Request) {
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   const allowedRoles = ['admin', 'super-admin'];
 
-  if (!session || !allowedRoles.includes(session.user.role)) {
+  if (!session || !allowedRoles.includes(session.userData.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -43,12 +43,12 @@ export async function POST(req: Request) {
         ],
       };
 
-      const existing = await user.findOne(query);
+      const existing = await userModel.findOne(query);
       if (existing) continue;
 
       const hashedPassword = await bcrypt.hash(u.password, 10);
 
-      const newUser = new user({
+      const newUser = new userModel({
         name: u.name,
         email: u.email || undefined,
         studentId: u.studentId || undefined,
