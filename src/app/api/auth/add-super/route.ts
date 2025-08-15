@@ -23,6 +23,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
+
+    
     // Check if Super Admin already exists
     const existingSuperAdmin = await userModel.findOne({ email: email });
     if (existingSuperAdmin) {

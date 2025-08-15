@@ -12,8 +12,8 @@ import Papa from 'papaparse';
 interface CSVRow {
   name: string;
   description: string;
-  price: string;
-  cost: string;
+  sellingPrice: string;
+  unitCost: string;
   quantity: string;
   category: string;
   sku: string;
@@ -64,115 +64,209 @@ export default function ImportProductsPage() {
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    setImportResults(null);
-
-    try {
-      // Parse CSV file
-      const results = await new Promise<any>((resolve, reject) => {
-        Papa.parse(file, {
-          header: true,
-          skipEmptyLines: true,
-          complete: resolve,
-          error: reject,
-        });
+const handleUpload = async () => {
+  if (!file) return;
+  setIsUploading(true);
+  setUploadProgress(0);
+  setImportResults(null);
+  try {
+    // Parse CSV file
+    const results = await new Promise<any>((resolve, reject) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: resolve,
+        error: reject,
       });
+    });
 
-      const rows: CSVRow[] = results.data;
-      const errors: ImportError[] = [];
-      const validProducts: any[] = [];
-
-      // Validate each row
-      rows.forEach((row, index) => {
-        const rowNumber = index + 2; // +2 because header is row 1 and we start at index 0
-        
-        // Check required fields
-        if (!row.name || !row.price || !row.cost || !row.quantity || !row.category || !row.sku) {
-          errors.push({
-            row: rowNumber,
-            message: 'Missing required fields',
-            data: row,
-          });
-          return;
-        }
-
-        // Validate numeric fields
-        if (isNaN(parseFloat(row.price)) || isNaN(parseFloat(row.cost)) || isNaN(parseInt(row.quantity))) {
-          errors.push({
-            row: rowNumber,
-            message: 'Invalid numeric values',
-            data: row,
-          });
-          return;
-        }
-
-        // Create product object
-        validProducts.push({
-          name: row.name,
-          description: row.description || '',
-          price: parseFloat(row.price),
-          cost: parseFloat(row.cost),
-          quantity: parseInt(row.quantity),
-          category: row.category, // This will be resolved on the server
-          sku: row.sku,
-          barcode: row.barcode || '',
-          imageUrl: row.imageUrl || '',
-        });
-      });
-
-      // Send to server
-      const response = await fetch('/api/products/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: validProducts }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to import products');
-      }
-
-      // Combine client-side errors with server-side errors
-      const combinedErrors = [...errors, ...(result.errors || [])];
+    const rows: any[] = results.data;
+    const errors: ImportError[] = [];
+    const validProducts: any[] = [];
+    
+    rows.forEach((row, index) => {
+      const rowNumber = index + 2;
       
-      setImportResults({
-        success: result.success || 0,
-        errors: combinedErrors,
+      // Extract and trim required fields
+      const name = row.name?.trim();
+      const sellingPrice = row.sellingPrice?.trim();
+      const quantity = row.quantity?.trim();
+      const unitCost = row.unitCost?.trim();
+      const category = row.category?.trim();
+
+      console.log(quantity,"Q",unitCost);
+      
+      
+      // Check for missing required fields
+      if (!name || !sellingPrice || !quantity || !unitCost || !category) {
+        errors.push({
+          row: rowNumber,
+          message: 'Missing required fields (name, sellingPrice, unitCost, quantity, category)',
+          data: row,
+        });
+        return;
+      }
+      
+      // Parse numeric values with robust handling
+      const parseNumber = (value: string, isInteger: boolean = false) => {
+        // Remove all non-numeric characters except decimal point and minus sign
+        let cleaned = value.replace(/[^\d.-]/g, '');
+        
+        // Handle decimal commas (convert to decimal point)
+        cleaned = cleaned.replace(',', '.');
+        
+        // Parse the number
+        const num = isInteger ? parseInt(cleaned, 10) : parseFloat(cleaned);
+        
+        // Return NaN if parsing failed
+        return isNaN(num) ? NaN : num;
+      };
+
+      const quantityValue = parseNumber(quantity, true);
+      const unitCostValue = parseNumber(unitCost, false);
+      const sellingPriceValue = parseNumber(sellingPrice, false);
+
+      // Validate parsed numbers
+      if (isNaN(quantityValue) || isNaN(unitCostValue) || isNaN(sellingPriceValue)) {
+        errors.push({
+          row: rowNumber,
+          message: 'Invalid numeric values (sellingPrice, unitCost, or quantity)',
+          data: row,
+        });
+        return;
+      }
+      
+      // Ensure quantity is a positive integer
+      if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
+        errors.push({
+          row: rowNumber,
+          message: 'Quantity must be a positive integer',
+          data: row,
+        });
+        return;
+      }
+      
+      // Ensure unitCost and sellingPrice are positive numbers
+      if (unitCostValue <= 0 || sellingPriceValue <= 0) {
+        errors.push({
+          row: rowNumber,
+          message: 'Unit cost and selling price must be positive numbers',
+          data: row,
+        });
+        return;
+      }
+         
+      validProducts.push({
+        name,
+        description: row.description?.trim() || '',
+        sellingPrice: sellingPriceValue,
+        category,
+        sku: row.sku?.trim() || undefined,
+        imageUrl: row.imageUrl?.trim() || '',
+        batches: [
+          {
+            purchaseDate: row.purchaseDate ? new Date(row.purchaseDate) : new Date(),
+            quantity: quantityValue,
+            unitCost: unitCostValue,
+            supplier: row.supplier?.trim() || '',
+            batchNumber: row.batchNumber?.trim() || '',
+          },
+        ],
       });
-    } catch (error) {
-      console.error('Import error:', error);
-      setImportResults({
-        success: 0,
-        errors: [{ row: 0, message: error instanceof Error ? error.message : 'Unknown error', data: null }],
-      });
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(100);
+    });
+    
+    const response = await fetch('/api/products/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products: validProducts }),
+    });
+    
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to import products');
     }
-  };
+    
+    const combinedErrors = [...errors, ...(result.errors || [])];
+    setImportResults({
+      success: result.success || 0,
+      errors: combinedErrors,
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    setImportResults({
+      success: 0,
+      errors: [{ row: 0, message: error instanceof Error ? error.message : 'Unknown error', data: null }],
+    });
+  } finally {
+    setIsUploading(false);
+    setUploadProgress(100);
+  }
+};
 
-  const downloadTemplate = () => {
-    const csvContent = [
-      'name,description,price,cost,quantity,category,sku,barcode,imageUrl',
-      'Example Product,Product description,19.99,10.50,100,Electronics,EXM001,123456789,https://example.com/image.jpg',
-      'Another Product,Another description,29.99,15.75,50,Electronics,EXM002,987654321,https://example.com/image2.jpg',
-    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'product_import_template.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+const downloadTemplate = () => {
+  const header = [
+    'name',
+    'description',
+    'sellingPrice',
+    'category',
+    'sku',         // optional: leave blank to auto-generate
+    'barcode',     // optional: leave blank to auto-generate
+    'imageUrl',
+    'purchaseDate',
+    'quantity',
+    'unitCost',
+    'supplier',
+    'batchNumber'
+  ].join(',');
+
+  const row1 = [
+    'Example Product',
+    'Product description',
+    '19.99',
+    'Electronics',
+    '',                      // sku -> auto
+    '',                      // barcode -> auto
+    'https://example.com/image.jpg',
+    '2025-08-01',
+    '100',
+    '10.50',
+    'ABC Supplier',
+    'INV-1001'
+  ];
+
+  const row2 = [
+    'Another Product',
+    'Another description',
+    '29.99',
+    'Home & Kitchen',
+    '',                      // sku -> auto
+    '',                      // barcode -> auto
+    'https://example.com/image2.jpg',
+    '2025-08-10',
+    '50',
+    '15.75',
+    'XYZ Traders',
+    'INV-1002'
+  ];
+
+  // CSV-safe quoting
+  const quoteRow = (arr: (string|number)[]) =>
+    arr.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+
+  const csvContent = [header, quoteRow(row1), quoteRow(row2)].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'product_import_template.csv';
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 
   return (
     <div className="mx-auto">
