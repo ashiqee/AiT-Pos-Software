@@ -94,7 +94,7 @@ export default function PurchasePage() {
       toast.error("Product already in purchase list");
       return;
     }
-console.log(supplier,"SUP");
+
 
     setPurchaseItems([
       ...purchaseItems,
@@ -184,10 +184,10 @@ console.log(supplier,"SUP");
         toast.error(`Quantity must be greater than 0 for ${item.product.name}`);
         return;
       }
-    //   if (!item.supplier) {
-    //     toast.error(`Supplier is required for ${item.product.name}`);
-    //     return;
-    //   }
+      if (!supplier) {
+        toast.error(`Supplier is required for ${item.product.name}`);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -234,15 +234,15 @@ console.log(supplier,"SUP");
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="md:p-4">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Product Purchase</h1>
-        <p className="text-gray-600">Restock products by creating a purchase order</p>
+        <h1 className="lg:text-2xl text-md font-bold">Product Purchase</h1>
+        <p className="text-gray-600 text-xs">Restock products by creating a purchase order</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Products Section */}
-        <div className="lg:w-2/3">
+        <div className="lg:w-2/3 ">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -258,8 +258,8 @@ console.log(supplier,"SUP");
                 </div>
               </div>
             </CardHeader>
-            <CardBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardBody className=" h-60 md:h-[380px] 2xl:h-[66vh] overflow-auto">
+              <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
                   <Card
                     key={product._id}
@@ -267,19 +267,20 @@ console.log(supplier,"SUP");
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onPress={() => addToPurchase(product)}
                   >
-                    <CardBody className="p-4">
+                    <CardBody className="p-4 ">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{product.name}</h3>
-                          <p className="text-sm text-gray-600">SKU: {product.sku}</p>
-                          <p className="text-sm text-gray-600">Barcode: {product.barcode}</p>
-                          <p className="text-sm text-gray-600">
+                        <div className="w-full">
+                          <h3 className="font-medium text-xs">{product.name}</h3>
+                          <p className="text-xs text-gray-600">SKU: {product.sku}</p>
+                          <p className="text-xs hidden text-gray-600">Barcode: {product.barcode}</p>
+                        {product.category.name &&  <p className="text-xs text-gray-600">
                             Category: {product.category.name}
                           </p>
-                          <p className="font-bold mt-1">
+                            }
+                          <p className="font-bold text-xs mt-1">
                             Selling Price: ${product.sellingPrice.toFixed(2)}
                           </p>
-                          <p className="text-sm mt-1">
+                          <p className="text-xs mt-1">
                             Current Stock: {product.totalQuantity}
                           </p>
                         </div>
@@ -394,6 +395,7 @@ console.log(supplier,"SUP");
                                 <Input
                                   type="number"
                                   min="1"
+                                  size="sm"
                                   value={item.quantity.toString()}
                                   onValueChange={(value) =>
                                     updateQuantity(

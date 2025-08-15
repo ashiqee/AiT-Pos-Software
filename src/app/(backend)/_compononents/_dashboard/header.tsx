@@ -7,6 +7,7 @@ import { Input } from '@heroui/input';
 import { Button } from '@heroui/button';
 import ProfileBar from '@/components/shared/ProfileBar';
 import { useRouter } from 'next/navigation';
+import { ThemeSwitch } from '@/components/theme-switch';
 
 export function Header() {
 const router =useRouter()
@@ -46,6 +47,8 @@ const router =useRouter()
             <Button variant="ghost" size="sm">
               <Bell className="h-5 w-5" />
             </Button>
+
+            <ThemeSwitch/>
             
             <div className="flex items-center space-x-3">
               

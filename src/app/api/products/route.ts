@@ -5,18 +5,16 @@ import { getServerSession } from 'next-auth';
 import { dbConnect } from '@/lib/db/dbConnect';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 
-
-
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const barcode = searchParams.get('barcode');
-    
+
     let query = {};
-    
+
     if (barcode) {
       // Exact barcode match
       query = { barcode: barcode };
@@ -26,21 +24,26 @@ export async function GET(request: NextRequest) {
         $or: [
           { name: { $regex: search, $options: 'i' } },
           { sku: { $regex: search, $options: 'i' } },
-          { 'category.name': { $regex: search, $options: 'i' } }
-        ]
+          { 'category.name': { $regex: search, $options: 'i' } },
+        ],
       };
     }
-    
-    const products = await Product.find(query);
-    
-    // Add stock information to each product
-    const productsWithStock = products.map(product => ({
+
+    const products = await Product.find(query)
+      .limit(barcode || search ? 0 : 20) // Limit only when no search or barcode
+      .exec();
+
+    const productsWithStock = products.map((product) => ({
       ...product.toObject(),
       inStock: product.totalQuantity > 0,
-      stockLevel: product.totalQuantity > 10 ? 'high' : 
-                 product.totalQuantity > 0 ? 'low' : 'out'
+      stockLevel:
+        product.totalQuantity > 10
+          ? 'high'
+          : product.totalQuantity > 0
+          ? 'low'
+          : 'out',
     }));
-    
+
     return NextResponse.json(productsWithStock);
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -50,6 +53,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 export async function POST(request: Request) {
   try {
