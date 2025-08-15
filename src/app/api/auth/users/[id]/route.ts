@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
  
    const allowedRoles = ['admin', 'super-admin'];
  
-   if (!session || !allowedRoles.includes(session?.userData.role)) {
+   if (!session || !allowedRoles.includes(session?.user.role)) {
      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
    }
  
@@ -52,7 +52,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
  
    const allowedRoles = ['admin', 'super-admin'];
  
-   if (!session || !allowedRoles.includes(session.userData.role)) {
+   if (!session || !allowedRoles.includes(session.user.role)) {
      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
    }
   

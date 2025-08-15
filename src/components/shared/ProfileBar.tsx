@@ -43,14 +43,14 @@ export default function ProfileBar() {
         </DropdownTrigger>
         <DropdownMenu aria-label="Profile Actions" variant="flat">
           <DropdownItem key="profile" className="h-14 gap-2">
-            <p>Welcome, {session.userData?.name}</p>
-            <p className="font-semibold">{session.userData?.role}</p>
+            <p>Welcome, {session.user?.name}</p>
+            <p className="font-semibold">{session.user?.role}</p>
           </DropdownItem>
           <DropdownItem key="settings">
-            <Link href={`/dashboard/${session.userData?.role}`}>Dashboard</Link>
+            <Link href={`/dashboard/${session.user?.role}`}>Dashboard</Link>
           </DropdownItem>
           <DropdownItem key="analytics">
-            <Link href={`/${session.userData?.role}/settings/profile`}>
+            <Link href={`/${session.user?.role}/settings/profile`}>
               Profile Settings
             </Link>
           </DropdownItem>

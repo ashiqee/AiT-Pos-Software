@@ -1,6 +1,46 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
-const batchSchema = new Schema({
+// Define interfaces for TypeScript
+interface IBatch {
+  purchaseDate: Date;
+  quantity: number;
+  unitCost: number;
+  supplier?: string;
+  batchNumber?: string;
+}
+
+export interface IProduct extends Document {
+  name: string;
+  description?: string;
+  sellingPrice: number;
+  batches: IBatch[];
+  totalQuantity: number;
+  totalSold: number;
+  category: mongoose.Types.ObjectId;
+  sku?: string;
+  barcode?: string;
+  imageUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Virtual fields will be added here
+  availableStock?: number;
+  inStock?: boolean;
+  stockLevel?: string;
+  
+  // Methods
+  recordSale(quantity: number, session?: any): Promise<IProduct>;
+  getAvailableStock(): number;
+  getStockInfo(): {
+    totalQuantity: number;
+    totalSold: number;
+    availableStock: number;
+    inStock: boolean;
+    stockLevel: string;
+  };
+}
+
+const batchSchema = new Schema<IBatch>({
   purchaseDate: { type: Date, default: Date.now },
   quantity: { type: Number, required: true },
   unitCost: { type: Number, required: true },
@@ -8,23 +48,43 @@ const batchSchema = new Schema({
   batchNumber: { type: String }
 });
 
-const productSchema = new Schema({
+const productSchema = new Schema<IProduct>({
   name: { type: String, required: true },
   description: { type: String },
   sellingPrice: { type: Number, required: true },
   batches: [batchSchema],
   totalQuantity: { type: Number, default: 0 },
+  totalSold: { type: Number, default: 0 },
   category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
   sku: { type: String, unique: true },
   barcode: { type: String },
   imageUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+},{
+virtuals:true
 });
 
-// Auto-update updatedAt and totalQuantity before saving
-productSchema.pre('save', async function (next) {
+// Virtual fields for stock information
+productSchema.virtual('availableStock').get(function() {
+  return this.totalQuantity - this.totalSold;
+});
+
+productSchema.virtual('inStock').get(function() {
+  return this.availableStock! > 0;
+});
+
+productSchema.virtual('stockLevel').get(function() {
+  if (this.availableStock === 0) return 'out';
+  if (this.availableStock! <= 10) return 'low';
+  return 'high';
+});
+
+// Auto-update updatedAt before saving
+productSchema.pre('save', async function(next) {
   this.updatedAt = new Date();
+  
+  // Calculate total quantity from batches
   this.totalQuantity = this.batches.reduce((sum, batch) => sum + batch.quantity, 0);
   
   // Auto-generate SKU only for new products
@@ -45,29 +105,15 @@ productSchema.pre('save', async function (next) {
   next();
 });
 
-// Method to reduce stock when a sale is made
-productSchema.methods.reduceStock = async function(quantity: number, session: any) {
+// Method to record a sale without modifying batches
+productSchema.methods.recordSale = async function(quantity: number, session?: any) {
   // Check if there's enough stock
-  if (this.totalQuantity < quantity) {
-    throw new Error(`Insufficient stock for product: ${this.name}. Available: ${this.totalQuantity}, Requested: ${quantity}`);
+  if (this.availableStock < quantity) {
+    throw new Error(`Insufficient stock for product: ${this.name}. Available: ${this.availableStock}, Requested: ${quantity}`);
   }
   
-  // Reduce stock using FIFO (First In, First Out) approach
-  let remainingQuantity = quantity;
-  
-  for (const batch of this.batches) {
-    if (remainingQuantity <= 0) break;
-    
-    if (batch.quantity >= remainingQuantity) {
-      // Reduce from this batch
-      batch.quantity -= remainingQuantity;
-      remainingQuantity = 0;
-    } else {
-      // Use entire batch and continue to next
-      remainingQuantity -= batch.quantity;
-      batch.quantity = 0;
-    }
-  }
+  // Increase the total sold quantity
+  this.totalSold += quantity;
   
   // Save the product with the session if provided
   if (session) {
@@ -79,7 +125,39 @@ productSchema.methods.reduceStock = async function(quantity: number, session: an
 
 // Method to get available stock
 productSchema.methods.getAvailableStock = function() {
-  return this.totalQuantity;
+  return this.availableStock;
 };
 
-export default mongoose.models.Product || mongoose.model('Product', productSchema);
+// Method to get stock information
+productSchema.methods.getStockInfo = function() {
+  return {
+    totalQuantity: this.totalQuantity,
+    totalSold: this.totalSold,
+    availableStock: this.availableStock,
+    inStock: this.inStock,
+    stockLevel: this.stockLevel
+  };
+};
+
+// Configure toJSON to include virtual fields
+productSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    delete ret.__v;
+    return ret;
+  }
+});
+
+// Configure toObject to include virtual fields
+productSchema.set('toObject', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    delete ret.__v;
+    return ret;
+  }
+});
+
+// Create the model
+const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);
+
+export default Product;

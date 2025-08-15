@@ -40,7 +40,9 @@ interface CartProduct {
   imageUrl: string;
   barcode: string;
   sellingPrice: number;
-  totalQuantity: number;
+  availableStock: number;
+  inStock: boolean;
+  stockLevel: string;
   category: { name: string };
   sku: string;
 }
@@ -62,9 +64,6 @@ export default function POSPage() {
   const [receiptData, setReceiptData] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
 
-
-
-
   // Fetch products
   const fetchProducts = async (search = "") => {
     try {
@@ -73,7 +72,6 @@ export default function POSPage() {
       setProducts(data);
 
       console.log(data);
-      
     } catch (error) {
       console.error("Failed to fetch products:", error);
     }
@@ -111,7 +109,6 @@ export default function POSPage() {
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  
 
   // Update quantity in cart
   const updateQuantity = (productId: string, quantity: number) => {
@@ -142,7 +139,6 @@ export default function POSPage() {
   const tax = subtotal * 0.08;
   const total = subtotal + tax - discount;
   const change = cashReceived ? parseFloat(cashReceived) - total : 0;
-
 
   // Process sale
   const processSale = async () => {
@@ -179,6 +175,7 @@ export default function POSPage() {
         setCart([]);
         setCashReceived("");
         setCustomerName("");
+        fetchProducts();
       } else {
         console.error("Failed to process sale");
       }
@@ -211,7 +208,7 @@ export default function POSPage() {
           />
         </div>
         <div className="absolute md:relative top-6 md:top-0 right-8">
-            <ProfileBar/>
+          <ProfileBar />
         </div>
       </div>
 
@@ -223,18 +220,18 @@ export default function POSPage() {
               <h2 className="text-lg font-semibold">Products</h2>
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                 {products?.map((product) => (
                   <Card
                     key={product._id}
-                    isPressable={product?.totalQuantity > 0}
+                    isPressable={product?.availableStock > 0}
                     className={`cursor-pointer hover:shadow-md transition-shadow ${
-                      product?.totalQuantity < 1
+                      product?.availableStock < 1
                         ? "opacity-50 cursor-not-allowed"
                         : ""
                     }`}
                     onPress={() => {
-                      if (product?.totalQuantity > 0) {
+                      if (product?.availableStock > 0) {
                         addToCart(product);
                       }
                     }}
@@ -266,9 +263,9 @@ export default function POSPage() {
                       </p>
                       <div className="md:flex-row flex flex-col gap-1 items-center justify-between w-full">
                         <p
-                          className={`mt-2 text-[10px] p-1 px-2 font-light rounded-md ${product?.totalQuantity < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
+                          className={`mt-2 text-[10px] p-1 px-2 font-light rounded-md ${product?.availableStock < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
                         >
-                          {product?.totalQuantity} in stock
+                          {product?.availableStock} in stock
                         </p>
                         <p className="text-[10px] bg-amber-50/5 p-1 px-2 rounded-md">
                           SKU-{product.sku}
@@ -286,10 +283,10 @@ export default function POSPage() {
         <div className="lg:w-1/3 overflow-y-auto">
           <Card className="h-full flex flex-col">
             <CardHeader>
-                              <h2 className="text-lg font-semibold flex items-center gap-2">
-    <ShoppingCart size={20} />
-    Shopping Cart ({totalItems})
-  </h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <ShoppingCart size={20} />
+                Shopping Cart ({totalItems})
+              </h2>
             </CardHeader>
             <CardBody className="flex-grow flex overflow-y-auto max-h-[52vh] flex-col">
               {cart.length === 0 ? (
@@ -308,12 +305,13 @@ export default function POSPage() {
                         <TableColumn> a</TableColumn>
                       </TableHeader>
                       <TableBody className="  ">
-                        {cart.map((item,i) => (
+                        {cart.map((item, i) => (
                           <TableRow key={item.product._id}>
                             <TableCell>
                               <div>
                                 <div className="font-medium text-sm">
-                                 <span className="text-sm">{i+1}.</span> {item.product.name}
+                                  <span className="text-sm">{i + 1}.</span>{" "}
+                                  {item.product.name}
                                 </div>
                                 <div className="text-sm text-gray-500">
                                   {item.product.sku}
@@ -342,6 +340,9 @@ export default function POSPage() {
                                   isIconOnly
                                   size="sm"
                                   variant="light"
+                                  isDisabled={
+                                    item.quantity >= item.product.availableStock
+                                  }
                                   onPress={() =>
                                     updateQuantity(
                                       item.product._id,
@@ -357,7 +358,10 @@ export default function POSPage() {
                               ${item.product.sellingPrice.toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              ${(item.product.sellingPrice * item.quantity).toFixed(2)}
+                              $
+                              {(
+                                item.product.sellingPrice * item.quantity
+                              ).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               <Button
@@ -377,8 +381,6 @@ export default function POSPage() {
                   </div>
 
                   <Divider className="my-4" />
-
-   
                 </>
               )}
             </CardBody>
@@ -387,39 +389,38 @@ export default function POSPage() {
       </div>
       <div className="flex flex-col md:flex-row-reverse gap-4 md:gap-10 mt-6 justify-between w-full">
         <div className="space-y-3 lg:w-1/3 dark:bg-gray-800/25 rounded-2xl bg-black/25 p-5 text-xs">
-  <div className="flex justify-between">
-    <span>Subtotal:</span>
-    <span>${subtotal.toFixed(2)}</span>
-  </div>
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
 
-  <div className="flex justify-between">
-    <span>Tax (8%):</span>
-    <span>${tax.toFixed(2)}</span>
-  </div>
+          <div className="flex justify-between">
+            <span>Tax (8%):</span>
+            <span>${tax.toFixed(2)}</span>
+          </div>
 
-  {/* Discount */}
-  <div className="flex justify-between items-center">
-    <span>Discount:</span>
-    <div>
-        - <input
-      type="number"
-      min="0"
-      max={subtotal + tax}
-      value={discount}
-      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-      className="w-24 px-2 py-1 rounded bg-white/5 text-white text-right text-xs"
-    />
-    </div>
-  </div>
-<Divider className="my-4" />
-  {/* Final total after discount */}
-  <div className="flex justify-between font-bold text-lg">
-    <span>Total:</span>
-    <span>${(subtotal + tax - discount).toFixed(2)}</span>
-  </div>
-
-  
-</div>
+          {/* Discount */}
+          <div className="flex justify-between items-center">
+            <span>Discount:</span>
+            <div>
+              -{" "}
+              <input
+                type="number"
+                min="0"
+                max={subtotal + tax}
+                value={discount}
+                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                className="w-24 px-2 py-1 rounded bg-white/5 text-white text-right text-xs"
+              />
+            </div>
+          </div>
+          <Divider className="my-4" />
+          {/* Final total after discount */}
+          <div className="flex justify-between font-bold text-lg">
+            <span>Total:</span>
+            <span>${(subtotal + tax - discount).toFixed(2)}</span>
+          </div>
+        </div>
 
         <div className="space-y-4 lg:w-2/3">
           <div className="flex gap-4 w-full">

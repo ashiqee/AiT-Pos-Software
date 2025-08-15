@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
   const allowedRoles = ['admin', 'super-admin'];
 
-  if (!session || !allowedRoles.includes(session.userData.role)) {
+  if (!session || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 
   const allowedRoles = ['admin', 'super-admin', 'guest', 'teacher'];
 
-  if (!session || !allowedRoles.includes(session.userData.role)) {
+  if (!session || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
