@@ -1,3 +1,4 @@
+// models/sale.js
 import mongoose, { Schema } from 'mongoose';
 
 const saleItemSchema = new Schema({
@@ -10,11 +11,12 @@ const saleItemSchema = new Schema({
 const saleSchema = new Schema({
   items: [saleItemSchema],
   subtotal: { type: Number, required: true },
+  discount: { type: Number, default: 0 },
   tax: { type: Number, required: true },
-  discount: { type: Number, default:0 },
   total: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
-  customer: { type: String },
+  customer: { type: String, required: true },
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
 });
 
