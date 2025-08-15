@@ -31,7 +31,7 @@ const LoginPage = () => {
       password: data.password,
     };
 
-    console.log(credentials);
+    
 
     try {
       const result = await signIn("credentials", {
@@ -55,6 +55,7 @@ const LoginPage = () => {
         router.push(redirect);
       } else {
         router.push("/dashboard");
+        setLoading(false);
       }
     } catch (error) {
       console.error("Login error:", error);
