@@ -54,3 +54,23 @@ export type Course = {
   createdAt: string;
   updatedAt: string;
 };
+
+
+// product type 
+export interface Product {
+  _id?:string;
+  name: string;
+  description?: string;
+  sellingPrice: number;
+  batches: [{
+    purchaseDate: Date;
+    quantity: number;
+    unitCost: number;
+    supplier?: string;
+    batchNumber: string;
+  }],
+  category: string;
+  sku?: string;
+  barcode?: string;
+  imageUrl?: string;
+}

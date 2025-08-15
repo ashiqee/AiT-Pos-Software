@@ -34,23 +34,24 @@ import {
 import Image from "next/image";
 import ProfileBar from "@/components/shared/ProfileBar";
 
-interface Product {
+interface CartProduct {
   _id: string;
   name: string;
   imageUrl: string;
-  price: number;
-  quantity: number;
+  barcode: string;
+  sellingPrice: number;
+  totalQuantity: number;
   category: { name: string };
   sku: string;
 }
 
 interface CartItem {
-  product: Product;
+  product: CartProduct;
   quantity: number;
 }
 
 export default function POSPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<CartProduct[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -70,6 +71,9 @@ export default function POSPage() {
       const response = await fetch(`/api/products?search=${search}`);
       const data = await response.json();
       setProducts(data);
+
+      console.log(data);
+      
     } catch (error) {
       console.error("Failed to fetch products:", error);
     }
@@ -88,7 +92,7 @@ export default function POSPage() {
   }, [searchTerm]);
 
   // Add product to cart
-  const addToCart = (product: Product) => {
+  const addToCart = (product: CartProduct) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(
         (item) => item.product._id === product._id
@@ -132,7 +136,7 @@ export default function POSPage() {
 
   // Calculate totals
   const subtotal = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + item.product.sellingPrice * item.quantity,
     0
   );
   const tax = subtotal * 0.08;
@@ -151,8 +155,8 @@ export default function POSPage() {
         items: cart.map((item) => ({
           product: item.product._id,
           quantity: item.quantity,
-          price: item.product.price,
-          total: item.product.price * item.quantity,
+          price: item.product.sellingPrice,
+          total: item.product.sellingPrice * item.quantity,
         })),
         subtotal,
         discount,
@@ -223,14 +227,14 @@ export default function POSPage() {
                 {products?.map((product) => (
                   <Card
                     key={product._id}
-                    isPressable={product?.quantity > 0}
+                    isPressable={product?.totalQuantity > 0}
                     className={`cursor-pointer hover:shadow-md transition-shadow ${
-                      product?.quantity < 1
+                      product?.totalQuantity < 1
                         ? "opacity-50 cursor-not-allowed"
                         : ""
                     }`}
                     onPress={() => {
-                      if (product?.quantity > 0) {
+                      if (product?.totalQuantity > 0) {
                         addToCart(product);
                       }
                     }}
@@ -258,13 +262,13 @@ export default function POSPage() {
                         {product?.category?.name}
                       </p>
                       <p className="font-bold text-lg mt-1">
-                        ৳{product.price.toFixed(2)}
+                        ৳{product.sellingPrice.toFixed(2)}
                       </p>
                       <div className="md:flex-row flex flex-col gap-1 items-center justify-between w-full">
                         <p
-                          className={`mt-2 text-[10px] p-1 px-2 font-light rounded-md ${product?.quantity < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
+                          className={`mt-2 text-[10px] p-1 px-2 font-light rounded-md ${product?.totalQuantity < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
                         >
-                          {product?.quantity} in stock
+                          {product?.totalQuantity} in stock
                         </p>
                         <p className="text-[10px] bg-amber-50/5 p-1 px-2 rounded-md">
                           SKU-{product.sku}
@@ -350,10 +354,10 @@ export default function POSPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              ${item.product.price.toFixed(2)}
+                              ${item.product.sellingPrice.toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              ${(item.product.price * item.quantity).toFixed(2)}
+                              ${(item.product.sellingPrice * item.quantity).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               <Button
