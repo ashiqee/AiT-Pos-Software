@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { Types } from "mongoose";
 
@@ -9,8 +9,13 @@ import { getServerSession } from "next-auth";
 import userModel from "@/models/user.model";
 
 
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+
+
+export async function PATCH(request: NextRequest, context: RouteParams) {
  const session = await getServerSession(authOptions);
  
    const allowedRoles = ['admin', 'super-admin'];
@@ -22,13 +27,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
  
     try {
     await dbConnect();
-    const id = params.id;
+    const { id } = await context.params;
 
     if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
 
-    const updates = await req.json();
+    const updates = await request.json();
 
     const updatedUser = await userModel.findByIdAndUpdate(id, updates, {
       new: true,
@@ -46,7 +51,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+
+
+export async function DELETE(request: NextRequest, context: RouteParams) {
   
   const session = await getServerSession(authOptions);
  
@@ -58,7 +65,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   
     try {
     await dbConnect();
-    const id = params.id;
+     const { id } = await context.params;
 
     if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });

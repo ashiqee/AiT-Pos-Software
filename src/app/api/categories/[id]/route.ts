@@ -1,19 +1,32 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Category from '@/models/category';
 import { getServerSession } from 'next-auth';
 import { dbConnect } from '@/lib/db/dbConnect';
 import { authOptions } from '../../auth/[...nextauth]/authOptions';
 
 
-interface Params {
-  params: { id: string };
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
 }
 
+
 // GET single category
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: NextRequest,context: RouteParams) {
+   const session = await getServerSession(authOptions);
+   
+     const allowedRoles = ['admin', 'super-admin'];
+   
+     if (!session || !allowedRoles.includes(session?.user.role)) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+     }
+   
   try {
+    
+    
     await dbConnect();
-    const category = await Category.findById(params.id);
+    const { id } = await context.params;
+    const category = await Category.findById(id);
 
     if (!category) {
       return NextResponse.json(
@@ -33,7 +46,7 @@ export async function GET(request: Request, { params }: Params) {
 }
 
 // PUT update category
-export async function PUT(request: Request, { params }: Params) {
+export async function PUT(request: NextRequest,context: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -52,8 +65,10 @@ export async function PUT(request: Request, { params }: Params) {
 
     await dbConnect();
 
+    const { id } = await context.params;
+
     // Check if category exists
-    const category = await Category.findById(params.id);
+    const category = await Category.findById(id);
     if (!category) {
       return NextResponse.json(
         { error: 'Category not found' },
@@ -64,7 +79,7 @@ export async function PUT(request: Request, { params }: Params) {
     // Check if another category with the same name exists
     const existingCategory = await Category.findOne({ 
       name, 
-      _id: { $ne: params.id } 
+      _id: { $ne: id } 
     });
     if (existingCategory) {
       return NextResponse.json(
@@ -91,7 +106,7 @@ export async function PUT(request: Request, { params }: Params) {
 }
 
 // DELETE category
-export async function DELETE(request: Request, { params }: Params) {
+export async function DELETE(request: Request, context: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -99,9 +114,10 @@ export async function DELETE(request: Request, { params }: Params) {
     }
 
     await dbConnect();
+    const {id} = await context.params
 
     // Check if category exists
-    const category = await Category.findById(params.id);
+    const category = await Category.findById(id);
     if (!category) {
       return NextResponse.json(
         { error: 'Category not found' },
@@ -111,7 +127,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
     // Check if category is being used by products
     const Product = (await import('@/models/product')).default;
-    const productsWithCategory = await Product.countDocuments({ category: params.id });
+    const productsWithCategory = await Product.countDocuments({ category: id });
     
     if (productsWithCategory > 0) {
       return NextResponse.json(
@@ -121,7 +137,7 @@ export async function DELETE(request: Request, { params }: Params) {
     }
 
     // Delete category
-    await Category.findByIdAndDelete(params.id);
+    await Category.findByIdAndDelete(id);
 
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {

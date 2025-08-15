@@ -1,5 +1,5 @@
 // app/api/users/[id]/reset-password/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 
 import { dbConnect } from "@/lib/db/dbConnect";
@@ -9,11 +9,15 @@ import userModel from "@/models/user.model";
 
 // import { sendEmail } from "@/lib/utils/email/sendEmail";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function POST(request: NextRequest, context: RouteParams) {
   try {
     await dbConnect();
-
-    const userData = await userModel.findById(params.id);
+  const { id } = await context.params;
+    const userData = await userModel.findById(id);
     if (!userData || !userData.email) {
       return NextResponse.json({ error: "User not found or missing email" }, { status: 404 });
     }

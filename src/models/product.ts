@@ -139,23 +139,22 @@ productSchema.methods.getStockInfo = function() {
   };
 };
 
-// Configure toJSON to include virtual fields
 productSchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {
-    delete ret.__v;
+    delete (ret as any).__v;
     return ret;
   }
 });
 
-// Configure toObject to include virtual fields
 productSchema.set('toObject', {
   virtuals: true,
   transform: (doc, ret) => {
-    delete ret.__v;
+    delete (ret as any).__v;
     return ret;
   }
 });
+
 
 // Create the model
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);

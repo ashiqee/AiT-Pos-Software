@@ -91,6 +91,8 @@ export default function POSPage() {
 
   // Add product to cart
   const addToCart = (product: CartProduct) => {
+    console.log("CLICK");
+    
     setCart((prevCart) => {
       const existingItem = prevCart.find(
         (item) => item.product._id === product._id
