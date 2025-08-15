@@ -32,7 +32,7 @@ export interface IUser{
 
 
 
-export type Role = "super-admin"|"admin" | "teacher" | "student" | "guest";
+export type Role = 'admin' | 'manager' | 'salesman' | 'customer';
 
 // @/types/index.ts or wherever your type is
 export type MenuLink = {

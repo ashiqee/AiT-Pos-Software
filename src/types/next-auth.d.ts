@@ -9,7 +9,7 @@ declare module "next-auth" {
       name: string;
       email: string;
       studentId?: string;
-      role: "admin"| "super-admin" | "teacher" | "student" |"guest";
+      role: 'admin' | 'manager' | 'salesman' | 'customer';
     };
   }
 
@@ -18,7 +18,7 @@ declare module "next-auth" {
     name: string;
     email: string;
     studentId?: string;
-    role: "admin"| "super-admin" | "teacher" | "student" |"guest";
+    role: 'admin' | 'manager' | 'salesman' | 'customer';
   }
 }
 
@@ -28,6 +28,6 @@ declare module "next-auth/jwt" {
     name: string;
     email: string;
     studentId?: string;
-    role: "admin" | "super-admin" | "teacher" | "student" |"guest";
+    role: 'admin' | 'manager' | 'salesman' | 'customer';
   }
 }

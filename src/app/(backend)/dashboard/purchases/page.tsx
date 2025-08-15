@@ -25,6 +25,8 @@ import {
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {  NumberInput } from "@heroui/react";
+import Image from "next/image";
 
 interface Product {
   _id: string;
@@ -34,7 +36,7 @@ interface Product {
   sellingPrice: number;
   totalQuantity: number;
   category: { name: string };
-  imageUrl?: string;
+  imageUrl: string;
 }
 
 interface PurchaseItem {
@@ -271,7 +273,7 @@ export default function PurchasePage() {
                       <div className="flex justify-between items-start">
                         <div className="w-full">
                           <h3 className="font-medium text-xs">{product.name}</h3>
-                          <p className="text-xs text-gray-600">SKU: {product.sku}</p>
+                          <p className="text-md text-sky-600">SKU: {product.sku}</p>
                           <p className="text-xs hidden text-gray-600">Barcode: {product.barcode}</p>
                         {product.category.name &&  <p className="text-xs text-gray-600">
                             Category: {product.category.name}
@@ -284,7 +286,8 @@ export default function PurchasePage() {
                             Current Stock: {product.totalQuantity}
                           </p>
                         </div>
-                        <Button
+                     <div className="flex flex-col justify-center items-center">
+                           <Button
                           isIconOnly
                           size="sm"
                           variant="light"
@@ -293,6 +296,16 @@ export default function PurchasePage() {
                         >
                           <Plus size={16} />
                         </Button>
+                        <Image
+                        width={400} 
+                        height={400}
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-12 rounded-md z-0 h-12 object-cover"
+                       
+                        />
+                     </div>
+
                       </div>
                     </CardBody>
                   </Card>
@@ -320,30 +333,32 @@ export default function PurchasePage() {
                 </div>
               ) : (
                 <>
-                  <div className="mb-4">
+                  <div className="mb-4 flex gap-3">
                     <Input
                       label="Default Supplier"
                       placeholder="Enter supplier name"
                       value={supplier}
                       onValueChange={setSupplier}
                     />
-                  </div>
-                  <div className="mb-4">
-                    <Input
+                     <Input
+                     
                       label="Invoice Number"
                       placeholder="Enter invoice number"
                       value={invoiceNumber}
                       onValueChange={setInvoiceNumber}
                     />
                   </div>
+                  
                   <div className="mb-4">
-                    <Input
+                    <NumberInput
+                    hideStepper
                       label="Tax Rate (%)"
                       placeholder="Enter tax rate"
                       type="number"
-                      min="0"
-                      value={taxRate.toString()}
-                      onValueChange={(value) => setTaxRate(parseFloat(value) || 0)}
+                      size="sm"
+                      minValue={0}
+                      defaultValue={taxRate}
+                      onValueChange={(value) => setTaxRate(value || 0)}
                     />
                   </div>
                   <div className="mb-4">
@@ -355,7 +370,7 @@ export default function PurchasePage() {
                     />
                   </div>
                   <Divider className="my-4" />
-                  <div className="max-h-96 overflow-y-auto">
+                  <div >
                     <Table aria-label="Purchase items">
                       <TableHeader>
                         <TableColumn>Product</TableColumn>
@@ -364,9 +379,12 @@ export default function PurchasePage() {
                         <TableColumn>Total</TableColumn>
                         <TableColumn>Action</TableColumn>
                       </TableHeader>
-                      <TableBody>
+                      <TableBody className="h-96 overflow-y-auto">
                         {purchaseItems.map((item) => (
-                          <TableRow key={item.product._id}>
+                          <TableRow
+  key={item.product._id}
+
+>
                             <TableCell>
                               <div>
                                 <div className="font-medium text-sm">
@@ -393,17 +411,18 @@ export default function PurchasePage() {
                                   <Minus size={16} />
                                 </Button>
                                 <Input
-                                  type="number"
-                                  min="1"
+                                
+                                  
+                                  min={1}
                                   size="sm"
                                   value={item.quantity.toString()}
                                   onValueChange={(value) =>
                                     updateQuantity(
                                       item.product._id,
-                                      parseInt(value) || 1
+                                      parseFloat(value) || 1
                                     )
                                   }
-                                  className="w-16 text-center"
+                                  className="w-12 text-center"
                                 />
                                 <Button
                                   isIconOnly
@@ -421,23 +440,25 @@ export default function PurchasePage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Input
+                              <NumberInput
+                              hideStepper
                                 type="number"
-                                min="0"
-                                step="0.01"
-                                value={item.unitCost.toString()}
+                                minValue={0}
+                                size="sm"
+                            
+                                defaultValue={item.unitCost}
                                 onValueChange={(value) =>
                                   updateUnitCost(
                                     item.product._id,
-                                    parseFloat(value) || 0
+                                    value || 0
                                   )
                                 }
                                 className="w-20"
-                                startContent="$"
+                                startContent="&#x09F3;"
                               />
                             </TableCell>
                             <TableCell>
-                              ${(item.unitCost * item.quantity).toFixed(2)}
+                                  &#x09F3;{(item.unitCost * item.quantity).toFixed(2)}
                             </TableCell>
                             <TableCell>
                               <Button
