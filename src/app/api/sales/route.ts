@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     await dbConnect();
     const body = await request.json();
-    const { items, subtotal, discount, tax, total, paymentMethod, customer } = body;
+    const { items, subtotal,amountPaid, discount, tax, total, paymentMethod, customer } = body;
 
     console.log(body, "RES");
     
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         tax,
         total,
         paymentMethod,
+        amountPaid,
         customer,
         user: session.user.id,
       });
