@@ -209,6 +209,7 @@ export default function POSPage() {
         setCart([]);
         setAmountPaid(""); // Reset amount paid
         // Reset cash received
+        setCustomerMobile("");
         setCustomerName("");
         fetchProducts();
       } else {
@@ -545,7 +546,7 @@ export default function POSPage() {
             />
             <Input
               size="sm"
-              label="Customer Mobile No."
+              label="Mobile No."
               placeholder="016----"
               value={customerMobile}
               onValueChange={setCustomerMobile}

@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { signOut, useSession,  } from 'next-auth/react';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Menu, Search, User } from 'lucide-react';
 import { Input } from '@heroui/input';
 import { Button } from '@heroui/button';
 import ProfileBar from '@/components/shared/ProfileBar';
 import { useRouter } from 'next/navigation';
 import { ThemeSwitch } from '@/components/theme-switch';
 
-export function Header() {
+export function Header({handleCollapsed}:any) {
 const router =useRouter()
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -26,7 +26,12 @@ const router =useRouter()
           <div className="flex items-center">
             <form onSubmit={handleSearch} className="flex items-center">
               <div className="relative rounded-md shadow-sm">
-                <Input
+                   <div className="flex justify-end p-2">
+        <button onClick={()=>handleCollapsed()}>
+          <Menu size={20} />
+        </button>
+      </div>
+                {/* <Input
                   type="text"
                   placeholder="Search..."
                   value={searchQuery}
@@ -35,7 +40,7 @@ const router =useRouter()
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                </div>
+                </div> */}
               </div>
             </form>
           </div>

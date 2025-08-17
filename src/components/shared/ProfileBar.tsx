@@ -47,7 +47,7 @@ export default function ProfileBar() {
             <p className="font-semibold">{session.user?.role}</p>
           </DropdownItem>
           <DropdownItem key="settings">
-            <Link href={`/dashboard}`}>Dashboard</Link>
+            <Link href={`/dashboard`}>Dashboard</Link>
           </DropdownItem>
           <DropdownItem key="analytics">
             <Link href={`/${session.user?.role}/settings/profile`}>

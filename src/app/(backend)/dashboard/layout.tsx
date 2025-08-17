@@ -5,6 +5,7 @@ import { Sidebar } from "../_compononents/_dashboard/sidebar";
 import SidebarTwo from "../_compononents/_dashboard/SidebarTwo";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Menu } from "lucide-react";
 
 
 export default function DashboardLayout({
@@ -22,16 +23,22 @@ export default function DashboardLayout({
     return router.push('/')
   }
 
-   const sidebarWidth = collapsed ? 64 : 256;
+  const handleCollapsed =()=>{
+    setCollapsed(!collapsed)
+  }
+
+
   return (
     
       <div className="flex h-screen">
-        <SidebarTwo role={role} toggleCollapse={()=>setCollapsed}  />
+        <SidebarTwo role={role} toggleCollapse={handleCollapsed}  collapsed={collapsed} />
         <div className="w-full">
          
-          <main   className="transition-all duration-300 flex-1 flex-1 flex flex-col "
-          style={{ marginLeft: sidebarWidth }}
-        >  <Header />
+          <main   className={`${collapsed ? "ml-0":"md:ml-[256px] ml-0"} transition-all duration-1000 flex-1  flex flex-col `}
+          
+        >  
+        
+        <Header handleCollapsed={handleCollapsed} />
          <div className="p-4">
            {children}
          </div>

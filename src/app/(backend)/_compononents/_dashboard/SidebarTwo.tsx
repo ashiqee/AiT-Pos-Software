@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Menu } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, X } from "lucide-react";
 import { roleBasedSidebarMenu } from "./sideBarmenu";
+import { ScrollShadow } from "@heroui/react";
 
 
 const SidebarSection = ({
@@ -55,18 +56,26 @@ const SidebarTwo = ({
   collapsed?: boolean;
   toggleCollapse: () => void;
 }) => {
-  const width = collapsed ? 'w-16' : 'w-64';
+ const width = collapsed ? "md:-translate-x-64 w-64 translate-x-0" : "md:translate-x-0 -translate-x-64  w-64";
+
   const sidebarMenu = roleBasedSidebarMenu[role];
 
   return (
-    <aside
-      className={`fixed top-0 left-0 h-[calc(100vh-60px)] overflow-auto border-r border-gray-700/25 dark:bg-[#0D1117] dark:text-white transition-all duration-300 ${width} z-50`}
+    <ScrollShadow className={`md:fixed absolute top-0 left-0 h-screen overflow-auto border-r border-gray-700/25 
+      dark:bg-[#0D1117] dark:text-white bg-gray-50 md:bg-gray-50/5 transition-all duration-1000
+         ${width} z-50`}>
+<aside
+      
     >
       {/* Toggle Button */}
-      <div className="flex justify-end p-2">
-        <button onClick={toggleCollapse}>
-          <Menu size={20} />
+      <div className="flex md:hidden absolute top-2 right-2 justify-end ">
+        <button className="hover:bg-amber-50/75 bg-black/25 p-3 rounded-2xl" onClick={toggleCollapse}>
+          <X size={20} />
         </button>
+      </div>
+
+      <div className="text-xl font-bold text-center py-5">
+        AIT POS 
       </div>
 
       {/* Menu Content */}
@@ -81,6 +90,8 @@ const SidebarTwo = ({
         ))}
       </nav>
     </aside>
+    </ScrollShadow>
+    
   );
 };
 
