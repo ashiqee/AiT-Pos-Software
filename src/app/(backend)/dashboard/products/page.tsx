@@ -12,7 +12,7 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Badge } from "@heroui/react";
+import { Badge, ScrollShadow } from "@heroui/react";
 import {
   Plus,
   Upload,
@@ -52,17 +52,17 @@ export default function ProductsManagePage() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Product Management</h1>
+          <h1 className="text-xl lg:text-2xl font-bold">Product Management</h1>
           <p className="text-gray-600">Manage your product inventory</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex justify-end gap-3 w-full ">
           <Link href="/dashboard/products/import">
             <Button
               color="primary"
               variant="flat"
               startContent={<Upload size={16} />}
-              className="w-full sm:w-auto"
+              className="w-full "
             >
               Bulk Import
             </Button>
@@ -71,7 +71,7 @@ export default function ProductsManagePage() {
             <Button
               color="primary"
               startContent={<Plus size={16} />}
-              className="w-full sm:w-auto"
+              className="w-full "
             >
               Add Product
             </Button>
@@ -186,7 +186,9 @@ export default function ProductsManagePage() {
               )}
             </div>
 
-            <div className="flex gap-2">
+           <ScrollShadow className="w-72 md:w-full ">
+
+             <div className="flex gap-2">
               <Button
                 variant="flat"
                 size="sm"
@@ -220,6 +222,7 @@ export default function ProductsManagePage() {
                 Out of Stock
               </Button>
             </div>
+           </ScrollShadow>
           </div>
         </CardBody>
       </Card>
