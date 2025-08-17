@@ -30,6 +30,8 @@ import {
   CreditCard,
   DollarSign,
   Printer,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import Image from "next/image";
 import ProfileBar from "@/components/shared/ProfileBar";
@@ -67,6 +69,20 @@ export default function POSPage() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [receiptData, setReceiptData] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+
+
 
   // Fetch products
   const fetchProducts = async (search = "") => {
@@ -224,15 +240,22 @@ export default function POSPage() {
           <h1 className="text-2xl font-bold">Point of Sale</h1>
           <p className="text-gray-600">Process sales and manage transactions</p>
         </div>
-        <div className="w-full md:w-80">
+        <div className="w-full ml-0 md:ml-28 md:w-80">
           <Input
             placeholder="Search by name or SKU..."
             value={searchTerm}
+            variant="bordered"
             onValueChange={setSearchTerm}
             size="lg"
           />
         </div>
         <div className="absolute md:relative flex gap-4  items-center top-6 md:top-0 right-5">
+          <button
+        onClick={toggleFullscreen}
+        className="p-2 rounded-lg hidden md:block hover:bg-gray-200 dark:hover:bg-gray-700"
+      >
+        {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+      </button>
           <ThemeSwitch/>
           <ProfileBar />
         </div>
@@ -246,7 +269,7 @@ export default function POSPage() {
             <CardHeader>
               <h2 className="text-lg font-semibold">Products</h2>
             </CardHeader>
-            <ScrollShadow hideScrollBar className="h-[54vh] ">
+            <ScrollShadow hideScrollBar className={`${isFullscreen ? "h-[64vh]"  :"h-[54vh] "}`}>
               <CardBody>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                   {products?.map((product) => (
@@ -436,7 +459,7 @@ export default function POSPage() {
 
       {/* Payment Section */}
       <div className="flex flex-col md:flex-row-reverse gap-4  mt-4 justify-between w-full">
-        <div className="space-y-3 md:w-[40rem] 2xl:w-1/3 dark:bg-gray-800/25 rounded-2xl bg-black/25 p-5 text-xs">
+        <div className="space-y-3 md:w-[40rem] 2xl:w-1/3 dark:bg-gray-800/25  bg-slate-600/15 p-4 rounded-xl  text-xs">
           <div className="flex justify-between">
             <span>Subtotal:</span>
             <span>&#x09F3;{subtotal.toFixed(2)}</span>
@@ -458,7 +481,7 @@ export default function POSPage() {
                 max={subtotal + tax}
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="w-24 px-2 py-1 rounded bg-white/5 text-white text-right text-xs"
+                className="w-24 px-2 py-1 border rounded dark:bg-white/5 dark:text-white text-right text-xs"
               />
             </div>
           </div>
@@ -498,7 +521,7 @@ export default function POSPage() {
                   max={totalNum}
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(e.target.value)}
-                  className="w-24 px-2 py-1 rounded bg-white/5 text-white text-right text-xs"
+                  className="w-24 px-2 py-1 rounded border dark:bg-white/5 dark:text-white text-right text-xs"
                 />
               </div>
 
@@ -511,7 +534,7 @@ export default function POSPage() {
           )}
         </div>
 
-        <div className="space-y-4 md:w-[50rem] 2xl:w-2/3">
+        <div className="space-y-4 md:w-[50rem] bg-slate-600/15 p-4 rounded-xl 2xl:w-2/3">
           <div className="flex gap-4 w-full">
             <Input
               size="sm"
