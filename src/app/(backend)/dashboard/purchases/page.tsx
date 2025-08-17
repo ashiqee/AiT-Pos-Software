@@ -25,7 +25,7 @@ import {
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {  NumberInput } from "@heroui/react";
+import {  NumberInput, ScrollShadow } from "@heroui/react";
 import Image from "next/image";
 
 interface Product {
@@ -236,8 +236,8 @@ export default function PurchasePage() {
   };
 
   return (
-    <div className="md:p-4">
-      <div className="mb-6">
+    <div >
+      <div className="mb-4">
         <h1 className="lg:text-2xl text-md font-bold">Product Purchase</h1>
         <p className="text-gray-600 text-xs">Restock products by creating a purchase order</p>
       </div>
@@ -250,7 +250,7 @@ export default function PurchasePage() {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Products</h2>
                 <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-3 top-1/2 right-0 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input
                     placeholder="Search products..."
                     value={searchTerm}
@@ -260,13 +260,14 @@ export default function PurchasePage() {
                 </div>
               </div>
             </CardHeader>
-            <CardBody className=" h-60 md:h-[380px] 2xl:h-[66vh] overflow-auto">
-              <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <ScrollShadow hideScrollBar className="md:h-[380px] h-60 2xl:h-[72vh]">
+            <CardBody >
+ <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                 {products.map((product) => (
                   <Card
                     key={product._id}
                     isPressable
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className="cursor-pointer hover:shadow rounded-md "
                     onPress={() => addToPurchase(product)}
                   >
                     <CardBody className="p-4 ">
@@ -280,7 +281,7 @@ export default function PurchasePage() {
                           </p>
                             }
                           <p className="font-bold text-xs mt-1">
-                            Selling Price: ${product.sellingPrice.toFixed(2)}
+                            Selling Price: &#x09F3;{product.sellingPrice.toFixed(2)}
                           </p>
                           <p className="text-xs mt-1">
                             Current Stock: {product.totalQuantity}
@@ -311,7 +312,9 @@ export default function PurchasePage() {
                   </Card>
                 ))}
               </div>
+             
             </CardBody>
+              </ScrollShadow>
           </Card>
         </div>
 
@@ -349,7 +352,7 @@ export default function PurchasePage() {
                     />
                   </div>
                   
-                  <div className="mb-4">
+                  <div className="mb-4 flex gap-3">
                     <NumberInput
                     hideStepper
                       label="Tax Rate (%)"
@@ -360,18 +363,22 @@ export default function PurchasePage() {
                       defaultValue={taxRate}
                       onValueChange={(value) => setTaxRate(value || 0)}
                     />
-                  </div>
-                  <div className="mb-4">
+
+                      
                     <Input
                       label="Notes"
+                      size="sm"
                       placeholder="Enter notes (optional)"
                       value={notes}
                       onValueChange={setNotes}
                     />
+                  
                   </div>
+               
                   <Divider className="my-4" />
                   <div >
-                    <Table aria-label="Purchase items">
+                    <ScrollShadow hideScrollBar className="h-96 overflow-y-auto">
+                    <Table isHeaderSticky aria-label="Purchase items" radius="sm">
                       <TableHeader>
                         <TableColumn>Product</TableColumn>
                         <TableColumn>Qty</TableColumn>
@@ -379,7 +386,8 @@ export default function PurchasePage() {
                         <TableColumn>Total</TableColumn>
                         <TableColumn>Action</TableColumn>
                       </TableHeader>
-                      <TableBody className="h-96 overflow-y-auto">
+                      
+ <TableBody >
                         {purchaseItems.map((item) => (
                           <TableRow
   key={item.product._id}
@@ -473,22 +481,24 @@ export default function PurchasePage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                      </TableBody>
+                      </TableBody>     
+                     
                     </Table>
+                      </ScrollShadow>
                   </div>
                   <Divider className="my-4" />
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>&#x09F3;{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax ({taxRate}%):</span>
-                      <span>${tax.toFixed(2)}</span>
+                      <span>&#x09F3;{tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>&#x09F3;{total.toFixed(2)}</span>
                     </div>
                   </div>
                   <div className="mt-4">

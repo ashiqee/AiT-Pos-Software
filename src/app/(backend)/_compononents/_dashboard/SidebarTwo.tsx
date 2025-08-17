@@ -61,7 +61,7 @@ const SidebarTwo = ({
   const sidebarMenu = roleBasedSidebarMenu[role];
 
   return (
-    <ScrollShadow className={`md:fixed absolute top-0 left-0 h-screen overflow-auto border-r border-gray-700/25 
+    <ScrollShadow hideScrollBar className={`md:fixed absolute top-0 left-0 h-screen overflow-auto border-r border-gray-700/25 
       dark:bg-[#0D1117] dark:text-white bg-gray-50 md:bg-gray-50/5 transition-all duration-1000
          ${width} z-50`}>
 <aside

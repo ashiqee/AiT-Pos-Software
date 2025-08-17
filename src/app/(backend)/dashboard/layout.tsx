@@ -6,6 +6,7 @@ import SidebarTwo from "../_compononents/_dashboard/SidebarTwo";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Menu } from "lucide-react";
+import { Spinner } from "@heroui/react";
 
 
 export default function DashboardLayout({
@@ -13,12 +14,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const {data:session}=useSession()
+  const {data:session ,status}=useSession()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false); 
 
   const role = session?.user.role
 
+
+  if(status === "loading"){
+    return <div className="flex flex-col justify-center h-screen"><Spinner/></div>
+  } 
+  
   if(!role){
     return router.push('/')
   }
