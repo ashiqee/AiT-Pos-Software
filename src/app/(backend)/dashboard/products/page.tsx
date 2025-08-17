@@ -5,11 +5,12 @@ import { Button } from "@heroui/button";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
-import { Badge } from "@heroui/badge";
+
 import { Plus, Upload, Search, Edit, Trash2, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/app/hooks/useProducts";
 import Image from "next/image";
+import { Badge } from "@heroui/react";
 
 
 export default function ProductsManagePage() {
