@@ -71,6 +71,8 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     fetchCategories();
   }, []);
 
+
+
   // Handle product form changes
   const handleProductChange = (field: string, value: string) => {
     setProductData(prev => ({ ...prev, [field]: value }));
@@ -184,7 +186,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
       }]);
       
       // Notify parent component
-      onProductAdded();
+    //   onProductAdded();
       
       // Close modal
       onClose();
