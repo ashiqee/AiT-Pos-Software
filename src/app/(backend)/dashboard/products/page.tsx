@@ -23,6 +23,7 @@ import {
   Barcode,
 } from "lucide-react";
 import { useProducts } from "@/app/hooks/useProducts";
+import AddProductModal from "../../_compononents/_products/_modals/AddProductModal";
 
 export default function ProductsManagePage() {
   const {
@@ -67,15 +68,7 @@ export default function ProductsManagePage() {
               Bulk Import
             </Button>
           </Link>
-          <Link href="/dashboard/products/create">
-            <Button
-              color="primary"
-              startContent={<Plus size={16} />}
-              className="w-full "
-            >
-              Add Product
-            </Button>
-          </Link>
+          <AddProductModal/>
         </div>
       </div>
 
