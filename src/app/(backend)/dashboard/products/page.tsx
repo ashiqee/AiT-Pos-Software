@@ -1,52 +1,66 @@
 "use client";
-
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
-
-import { Plus, Upload, Search, Edit, Trash2, Package } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useProducts } from "@/app/hooks/useProducts";
-import Image from "next/image";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@heroui/table";
 import { Badge } from "@heroui/react";
-
+import {
+  Plus,
+  Upload,
+  Search,
+  Edit,
+  Trash2,
+  Package,
+  Barcode,
+} from "lucide-react";
+import { useProducts } from "@/app/hooks/useProducts";
 
 export default function ProductsManagePage() {
-   const {
+  const {
     products,
+    summary,
+    pagination,
     isLoading,
     error,
     searchTerm,
     setSearchTerm,
-    refreshProducts
+    barcode,
+    setBarcode,
+    stockFilter,
+    setStockFilter,
+    currentPage,
+    goToPage,
+    nextPage,
+    prevPage,
+    clearFilters,
   } = useProducts();
 
-
-
-
-  // Filter products based on search term
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Clear barcode search
+  const clearBarcode = () => setBarcode(null);
 
   return (
-    <div className="">
+    <div>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Product Management</h1>
           <p className="text-gray-600">Manage your product inventory</p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <Link href="/dashboard/products/import">
-            <Button 
-              color="primary" 
-              variant="flat" 
+            <Button
+              color="primary"
+              variant="flat"
               startContent={<Upload size={16} />}
               className="w-full sm:w-auto"
             >
@@ -54,8 +68,8 @@ export default function ProductsManagePage() {
             </Button>
           </Link>
           <Link href="/dashboard/products/create">
-            <Button 
-              color="primary" 
+            <Button
+              color="primary"
               startContent={<Plus size={16} />}
               className="w-full sm:w-auto"
             >
@@ -75,12 +89,14 @@ export default function ProductsManagePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Products</p>
-                <p className="text-xl font-bold">{products.length}</p>
+                <p className="text-xl font-bold">
+                  {summary?.totalProducts ?? 0}
+                </p>
               </div>
             </div>
           </CardBody>
         </Card>
-        
+
         <Card>
           <CardBody className="p-4">
             <div className="flex items-center">
@@ -90,13 +106,13 @@ export default function ProductsManagePage() {
               <div>
                 <p className="text-sm text-gray-500">In Stock</p>
                 <p className="text-xl font-bold">
-                  {products.filter(p => p.inStock).length}
+                  {summary?.inStockCount ?? 0}
                 </p>
               </div>
             </div>
           </CardBody>
         </Card>
-        
+
         <Card>
           <CardBody className="p-4">
             <div className="flex items-center">
@@ -106,13 +122,13 @@ export default function ProductsManagePage() {
               <div>
                 <p className="text-sm text-gray-500">Low Stock</p>
                 <p className="text-xl font-bold">
-                  {products.filter(p => p.stockLevel === "low").length}
+                  {summary?.lowStockCount ?? 0}
                 </p>
               </div>
             </div>
           </CardBody>
         </Card>
-        
+
         <Card>
           <CardBody className="p-4">
             <div className="flex items-center">
@@ -122,13 +138,25 @@ export default function ProductsManagePage() {
               <div>
                 <p className="text-sm text-gray-500">Out of Stock</p>
                 <p className="text-xl font-bold">
-                  {products.filter(p => !p.inStock).length}
+                  {summary?.outOfStockCount ?? 0}
                 </p>
               </div>
             </div>
           </CardBody>
         </Card>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className="mb-6 border-red-200 bg-red-50">
+          <CardBody className="p-4">
+            <div className="flex items-center text-red-700">
+              <Package className="mr-2" />
+              <span>{error}</span>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card className="mb-6">
@@ -140,12 +168,57 @@ export default function ProductsManagePage() {
               onValueChange={setSearchTerm}
               startContent={<Search size={16} />}
               className="w-full md:w-96"
+              disabled={!!barcode}
             />
+
             <div className="flex gap-2">
-              <Button variant="flat" size="sm">All</Button>
-              <Button variant="flat" size="sm">Electronics</Button>
-              <Button variant="flat" size="sm">Accessories</Button>
-              <Button variant="flat" size="sm">Clothing</Button>
+              <Input
+                placeholder="Scan or enter barcode..."
+                value={barcode || ""}
+                onValueChange={setBarcode}
+                startContent={<Barcode size={16} />}
+                className="w-full md:w-96"
+              />
+              {barcode && (
+                <Button color="danger" variant="light" onPress={clearBarcode}>
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="flat"
+                size="sm"
+                color={stockFilter === null ? "primary" : "default"}
+                onPress={() => setStockFilter(null)}
+              >
+                All
+              </Button>
+              <Button
+                variant="flat"
+                size="sm"
+                color={stockFilter === "high" ? "primary" : "default"}
+                onPress={() => setStockFilter("high")}
+              >
+                High Stock
+              </Button>
+              <Button
+                variant="flat"
+                size="sm"
+                color={stockFilter === "low" ? "primary" : "default"}
+                onPress={() => setStockFilter("low")}
+              >
+                Low Stock
+              </Button>
+              <Button
+                variant="flat"
+                size="sm"
+                color={stockFilter === "out" ? "primary" : "default"}
+                onPress={() => setStockFilter("out")}
+              >
+                Out of Stock
+              </Button>
             </div>
           </div>
         </CardBody>
@@ -159,64 +232,89 @@ export default function ProductsManagePage() {
         <CardBody>
           {isLoading ? (
             <div className="text-center py-8">Loading products...</div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No products found
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {barcode
+                  ? "No product found with this barcode"
+                  : "Try adjusting your search or create a new product"}
+              </p>
+              <div className="mt-6">
+                <Link href="/dashboard/products/create">
+                  <Button color="primary">
+                    <Plus size={16} className="mr-1" />
+                    Add Product
+                  </Button>
+                </Link>
+              </div>
+            </div>
           ) : (
             <Table aria-label="Products table">
               <TableHeader>
                 <TableColumn>PRODUCT</TableColumn>
-                <TableColumn>CATEGORY</TableColumn>
                 <TableColumn>PRICE</TableColumn>
+                <TableColumn>Total Sold</TableColumn>
                 <TableColumn>STOCK</TableColumn>
                 <TableColumn>STATUS</TableColumn>
                 <TableColumn>ACTIONS</TableColumn>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   <TableRow key={product._id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="bg-gray-200 rounded-lg w-12 h-12 flex items-center justify-center">
-                          {
-                            product.imageUrl ? <>
-                            
+                          {product.imageUrl ? (
                             <Image
-                            src={product.imageUrl}
-                            alt={product.name}
-                            width={400}height={400}
-                            className="size-12 rounded-md"
+                              src={product.imageUrl}
+                              alt={product.name}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 rounded-md object-cover"
                             />
-                            </>:<span className="text-gray-500 text-xs">IMG</span>
-                          }
-                          
+                          ) : (
+                            <span className="text-gray-500 text-xs">IMG</span>
+                          )}
                         </div>
                         <div>
                           <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.sku}</div>
+                          <div className="text-sm text-gray-500">
+                            {product.sku}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{product.category.name}</TableCell>
-                    <TableCell>${product?.sellingPrice?.toFixed(2)}</TableCell>
+                    <TableCell>${product.sellingPrice.toFixed(2)}</TableCell>
+                    <TableCell>{product.totalSold}</TableCell>
                     <TableCell>{product.totalQuantity}</TableCell>
                     <TableCell>
-                      <Badge 
-                        color={
-                          product.stockLevel === "high" ? "success" : 
-                          product.stockLevel === "medium" ? "warning" : 
-                          product.stockLevel === "low" ? "danger" : "default"
-                        }
-                        variant="flat"
+                      <span
+                        className={`px-3 pb-1 capitalize rounded-md ${
+                          product.stockLevel === "out"
+                            ? "bg-red-700 text-white"
+                            : product.stockLevel === "high"
+                              ? "bg-green-700 text-white"
+                              : "bg-yellow-400 text-black"
+                        }`}
                       >
-                        {product.stockLevel === "high" ? "In Stock" : 
-                         product.stockLevel === "medium" ? "Medium Stock" : 
-                         product.stockLevel === "low" ? "Low Stock" : "Out of Stock"}
-                      </Badge>
+                        {product.stockLevel}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button isIconOnly size="sm" variant="light">
                           <Edit size={16} />
                         </Button>
-                        <Button isIconOnly size="sm" variant="light" color="danger">
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          color="danger"
+                        >
                           <Trash2 size={16} />
                         </Button>
                       </div>
@@ -228,6 +326,32 @@ export default function ProductsManagePage() {
           )}
         </CardBody>
       </Card>
+      {/* // Add pagination controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex justify-center mt-4">
+          <div className="flex items-center gap-2">
+            <Button
+              isDisabled={!pagination.hasPrev}
+              variant="flat"
+              size="sm"
+              onPress={prevPage}
+            >
+              Previous
+            </Button>
+            <span className="text-sm">
+              Page {currentPage} of {pagination.totalPages}
+            </span>
+            <Button
+              isDisabled={!pagination.hasNext}
+              variant="flat"
+              size="sm"
+              onPress={nextPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
