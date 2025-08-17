@@ -34,6 +34,7 @@ import {
 import Image from "next/image";
 import ProfileBar from "@/components/shared/ProfileBar";
 import { NumberInput, ScrollShadow } from "@heroui/react";
+import { ThemeSwitch } from "@/components/theme-switch";
 
 interface CartProduct {
   _id: string;
@@ -73,8 +74,6 @@ export default function POSPage() {
       const response = await fetch(`/api/products?search=${search}`);
       const data = await response.json();
       setProducts(data);
-
-      console.log(data);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     }
@@ -89,12 +88,12 @@ export default function POSPage() {
   const total = Math.round(subtotal + tax - discount).toFixed(2);
 
   useEffect(() => {
-    if (total) {
-      setAmountPaid(total);
-    } else {
-      fetchProducts(); // initial load
-    }
-  }, [total,cashReceived]);
+    fetchProducts(); // initial load
+  }, []);
+
+  useEffect(() => {
+    setAmountPaid(total); // initial load
+  }, [total]);
 
   // Trigger search with debounce
   useEffect(() => {
@@ -177,7 +176,7 @@ export default function POSPage() {
         amountPaid: amountPaidNum, // Include amount paid
         customer: {
           customerName: customerName || "Walk-in Customer",
-          customerMobile
+          customerMobile,
         },
       };
 
@@ -193,7 +192,7 @@ export default function POSPage() {
         onOpen();
         setCart([]);
         setAmountPaid(""); // Reset amount paid
-        setCashReceived(""); // Reset cash received
+        // Reset cash received
         setCustomerName("");
         fetchProducts();
       } else {
@@ -205,6 +204,8 @@ export default function POSPage() {
       setIsProcessing(false);
     }
   };
+
+ 
 
   // Print receipt
   const printReceipt = () => {
@@ -218,7 +219,7 @@ export default function POSPage() {
   return (
     <div className="flex  flex-col ">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
+      <div className="flex flex-col md:flex-row justify-between  gap-3 mb-3">
         <div>
           <h1 className="text-2xl font-bold">Point of Sale</h1>
           <p className="text-gray-600">Process sales and manage transactions</p>
@@ -231,7 +232,8 @@ export default function POSPage() {
             size="lg"
           />
         </div>
-        <div className="absolute md:relative top-6 md:top-0 right-8">
+        <div className="absolute md:relative flex gap-4  items-center top-6 md:top-0 right-5">
+          <ThemeSwitch/>
           <ProfileBar />
         </div>
       </div>
@@ -244,7 +246,7 @@ export default function POSPage() {
             <CardHeader>
               <h2 className="text-lg font-semibold">Products</h2>
             </CardHeader>
-            <ScrollShadow hideScrollBar className="h-[60vh] ">
+            <ScrollShadow hideScrollBar className="h-[54vh] ">
               <CardBody>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                   {products?.map((product) => (
@@ -309,15 +311,15 @@ export default function POSPage() {
         </div>
 
         {/* Cart Section */}
-        <div className="2xl:w-1/3 md:w-[40rem] ">
-          <Card className="h-full flex flex-col">
+        <div className="2xl:w-1/3 md:w-[40rem]  ">
+          <Card className="h-full flex flex-col ">
             <CardHeader>
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <ShoppingCart size={20} />
                 Shopping Cart ({totalItems})
               </h2>
             </CardHeader>
-            <ScrollShadow hideScrollBar className="h-[50vh] ">
+            <ScrollShadow hideScrollBar className="h-[54vh]   ">
               <CardBody className="flex-grow flex   flex-col">
                 {cart.length === 0 ? (
                   <div className="flex-grow flex items-center justify-center text-gray-500">
@@ -325,9 +327,9 @@ export default function POSPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex-grow  mb-4">
+                    <div className="flex-grow ">
                       <Table aria-label="Cart items">
-                        <TableHeader>
+                        <TableHeader className="sticky">
                           <TableColumn>Item</TableColumn>
                           <TableColumn>Qty</TableColumn>
 
@@ -423,7 +425,7 @@ export default function POSPage() {
                       </Table>
                     </div>
 
-                    <Divider className="my-4" />
+                    {/* <Divider className="my-4" /> */}
                   </>
                 )}
               </CardBody>
@@ -433,7 +435,7 @@ export default function POSPage() {
       </div>
 
       {/* Payment Section */}
-      <div className="flex flex-col md:flex-row-reverse gap-4  mt-6 justify-between w-full">
+      <div className="flex flex-col md:flex-row-reverse gap-4  mt-4 justify-between w-full">
         <div className="space-y-3 md:w-[40rem] 2xl:w-1/3 dark:bg-gray-800/25 rounded-2xl bg-black/25 p-5 text-xs">
           <div className="flex justify-between">
             <span>Subtotal:</span>
@@ -528,7 +530,7 @@ export default function POSPage() {
           </div>
           <div className="flex gap-4">
             <Select
-              size="sm"
+              size="md"
               label="Payment Method"
               selectedKeys={[paymentMethod]}
               onSelectionChange={(keys) =>
@@ -546,23 +548,22 @@ export default function POSPage() {
 
             {/* Cash Received (only for cash payments) */}
             {paymentMethod === "cash" && (
-              <NumberInput
-                hideStepper
-                size="sm"
-                label="Cash Received"
-                placeholder="0.00"
-                defaultValue={cashReceived ? parseFloat(cashReceived) : 0}
-                onValueChange={(value) =>
-                  setCashReceived(value ? value.toString() : "0")
-                }
-                startContent="৳"
-              />
+              <Input
+              
+              type="number"
+              label="Cash Received"
+              placeholder="0.00"
+              value={cashReceived}
+              onValueChange={setCashReceived}
+               startContent="৳"
+            />
+             
             )}
           </div>
 
           {/* Change (only for cash payments) */}
           {paymentMethod === "cash" && cashReceived && (
-            <div className="flex justify-between text-xl font-medium">
+            <div className="flex justify-between text-xl  font-medium">
               <span>Change:</span>
               <span className={change >= 0 ? "text-green-600" : "text-red-600"}>
                 &#x09F3;{Math.abs(change).toFixed(2)}
@@ -589,96 +590,248 @@ export default function POSPage() {
       </div>
 
       {/* Receipt Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-        <ModalContent>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="md"
+        className="print-modal"
+      >
+        <ModalContent className="max-w-xs mx-auto">
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
-                Sale Receipt
+              <ModalHeader className="flex flex-col gap-1 text-center p-2">
+                <h2 className="text-xl font-bold">রাইয়ান কসমেটিক্স</h2>
+                <p className="text-xs ">
+                  Madhupur,Tangail
+                </p>
+                <p className="text-xs ">Tel: 01728-099763</p>
+                <Divider className="my-1" />
+                <p className="text-sm font-medium">
+                  Receipt #{receiptData?._id.toString().slice(-6)}
+                </p>
+                <p className="text-xs">
+                  {new Date(receiptData?.createdAt).toLocaleString()}
+                </p>
+                <p className="text-xs">
+                  Customer:{" "}
+                  {receiptData?.customer?.customerName || "Walk-in Customer"}
+                </p>
+                {receiptData?.customer?.customerMobile && (
+                  <p className="text-xs">
+                    Mobile: {receiptData.customer.customerMobile}
+                  </p>
+                )}
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="p-2">
                 {receiptData && (
-                  <div className="p-4 bg-white text-black rounded-lg border border-gray-200">
-                    {/* ... existing receipt header ... */}
+                  <div className="text-xs font-mono">
+                    <Table
+                      aria-label="Receipt items"
+                      className="text-xs"
+                      removeWrapper
+                    >
+                      <TableHeader>
+                        <TableColumn className="text-xs p-1">Item</TableColumn>
+                        <TableColumn className="text-xs p-1 text-right">
+                          Qty
+                        </TableColumn>
+                      
+                        <TableColumn className="text-xs p-1 text-right">
+                          Total
+                        </TableColumn>
+                      </TableHeader>
+                      <TableBody>
+                        {receiptData.items.map((item: any, index: number) => (
+                          <TableRow
+                            key={index}
+                            className="border-b border-dashed border-gray-300"
+                          >
+                            <TableCell className="p-1">
+                              <div className="flex flex-col">
+                               <span className="truncate max-w-[196px]">
+                                   {item.product.name}
+                               </span>
 
-                    <div className="space-y-2">
-                      {/* ... existing subtotal, tax, discount ... */}
+                                <div className="text-[8px] flex gap-6">
+                                 <span> {item.product.sku} </span>
+                                 <span> ৳{item.price.toFixed(2)} </span>
+                                 
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="p-1 text-right">
+                              {item.quantity}
+                            </TableCell>
+                          
+                            <TableCell className="p-1 text-right">
+                              ৳{item.total.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
 
-                      <div className="flex justify-between font-bold text-lg">
+                    <Divider className="my-2" />
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>৳{receiptData.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tax (8%):</span>
+                        <span>৳{receiptData.tax.toFixed(2)}</span>
+                      </div>
+                      {receiptData.discount > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>Discount:</span>
+                          <span>-৳{receiptData.discount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold border-t border-dashed border-gray-300 pt-1">
                         <span>Total:</span>
-                        <span>${receiptData.total.toFixed(2)}</span>
+                        <span>৳{receiptData.total.toFixed(2)}</span>
                       </div>
 
                       {/* Payment Details */}
-                      <div className="flex justify-between">
-                        <span>Payment Method:</span>
-                        <span className="capitalize">
-                          {receiptData.paymentMethod}
-                        </span>
-                      </div>
+                      <div className="border-t border-dashed border-gray-300 pt-1 mt-2">
+                        <div className="flex justify-between font-medium">
+                          <span>Payment Method:</span>
+                          <span className="capitalize">
+                            {receiptData.paymentMethod}
+                          </span>
+                        </div>
 
-                      <div className="flex justify-between">
-                        <span>Amount Paid:</span>
-                        <span>${receiptData.amountPaid.toFixed(2)}</span>
-                      </div>
+                        {/* Amount Paid */}
+                        <div className="flex justify-between">
+                          <span>Amount Paid:</span>
+                          <span>৳{receiptData.amountPaid.toFixed(2)}</span>
+                        </div>
 
-                      <div className="flex justify-between">
-                        <span>Due Amount:</span>
-                        <span>${receiptData.dueAmount.toFixed(2)}</span>
-                      </div>
-
-                      <div className="flex justify-between">
-                        <span>Payment Status:</span>
-                        <span>
-                          <Badge
-                            color={
-                              receiptData.paymentStatus === "Paid"
-                                ? "success"
-                                : receiptData.paymentStatus === "Partial"
-                                  ? "warning"
-                                  : "danger"
-                            }
-                          >
-                            {receiptData.paymentStatus}
-                          </Badge>
-                        </span>
-                      </div>
-
-                      {/* Cash-specific details */}
-                      {paymentMethod === "cash" && (
-                        <>
-                          <div className="flex justify-between">
-                            <span>Cash Received:</span>
-                            <span>${cashReceived}</span>
+                        {/* Due Amount (if partial payment) */}
+                        {receiptData.amountPaid < receiptData.total && (
+                          <div className="flex justify-between text-red-600 font-medium">
+                            <span>Due Amount:</span>
+                            <span>
+                              ৳
+                              {(
+                                receiptData.total - receiptData.amountPaid
+                              ).toFixed(2)}
+                            </span>
                           </div>
-                          <div className="flex justify-between font-medium">
-                            <span>Change:</span>
-                            <span>${change.toFixed(2)}</span>
-                          </div>
-                        </>
-                      )}
+                        )}
+
+                        {/* Cash Payment Details */}
+                        {receiptData.paymentMethod === "cash" && (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Cash Received:</span>
+                              <span>
+                                ৳{parseFloat(cashReceived).toFixed(2)}
+                              </span>
+                            </div>
+                            {parseFloat(cashReceived) >
+                              receiptData.amountPaid && (
+                              <div className="flex justify-between font-medium">
+                                <span>Change:</span>
+                                <span>
+                                  ৳
+                                  {(
+                                    parseFloat(cashReceived) -
+                                    receiptData.amountPaid
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
 
-                    {/* ... existing receipt footer ... */}
+                    <Divider className="my-2" />
+
+                    <div className="text-center pt-2">
+                      <p className="text-xs">Thank you for your business!</p>
+                      <p className="text-xs">Have a great day!</p>
+                      <p className="text-xs mt-2">
+                        {new Date().toLocaleDateString()}
+                      </p>
+
+                      {/* Payment Status Badge */}
+                      <div className="mt-2">
+                        {receiptData.amountPaid >= receiptData.total ? (
+                          <Badge color="success" className="text-xs">
+                            PAID IN FULL
+                          </Badge>
+                        ) : (
+                          <Badge color="warning" className="text-xs">
+                            PARTIAL PAYMENT
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </ModalBody>
-              <ModalFooter>
-                <Button color="primary" variant="light" onPress={onClose}>
-                  Close
-                </Button>
+              <ModalFooter className="p-2 justify-center">
                 <Button
                   color="primary"
-                  onPress={printReceipt}
-                  startContent={<Printer size={16} />}
+                  variant="light"
+                  size="sm"
+                  onPress={() => {
+                    onClose();
+                    setCashReceived("");
+                    setDiscount(0)
+                  }}
                 >
-                  Print Receipt
+                  Close
+                </Button>
+
+                <Button
+                  color="primary"
+                  onPress={() => {
+                    printReceipt();
+                    setCashReceived("");
+                    setDiscount(0)
+                  }}
+                  size="sm"
+                  startContent={<Printer size={14} />}
+                >
+                  Print
                 </Button>
               </ModalFooter>
             </>
           )}
         </ModalContent>
       </Modal>
+
+      <style jsx global>{`
+        @media print {
+         body * {
+  visibility: hidden;
+  color: black;
+}
+          .print-modal,
+          .print-modal * {
+            visibility: visible;
+          }
+          .print-modal {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .print-modal .modal-content {
+            box-shadow: none !important;
+            border: none !important;
+            width: 80mm !important;
+            margin: 0 auto !important;
+          }
+          .print-modal .modal-footer {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

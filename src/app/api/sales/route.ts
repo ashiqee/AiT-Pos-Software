@@ -100,8 +100,11 @@ export async function POST(request: NextRequest) {
         customer,
         user: session.user.id,
       });
-      
-      await sale.save();
+      // Save first
+    await sale.save();
+
+  // Populate the product inside items
+    await sale.populate("items.product","name sku");
       return NextResponse.json(sale);
     } catch (error) {
       console.error('Sale creation error:', error);

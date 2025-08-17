@@ -11,7 +11,7 @@ export default function PosLayout({
  
        
          
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-black p-6">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-black p-4">
             {children}
           </main>
         
