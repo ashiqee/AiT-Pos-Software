@@ -76,7 +76,7 @@ productSchema.virtual('inStock').get(function() {
 
 productSchema.virtual('stockLevel').get(function() {
   if (this.availableStock === 0) return 'out';
-  if (this.availableStock! <= 10) return 'low';
+  if (this.availableStock! <= 5) return 'low';
   return 'high';
 });
 
