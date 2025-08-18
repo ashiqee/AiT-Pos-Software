@@ -4,6 +4,7 @@ import Product from '@/models/product';
 import { getServerSession } from 'next-auth';
 import { dbConnect } from '@/lib/db/dbConnect';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
+import { generateBarcode } from '@/lib/utils/barcode';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,14 +59,35 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await dbConnect();
     const data = await request.json();
-    const product = new Product(data);
+
+    // Auto-generate barcode if missing
+    let finalBarcode = data.barcode;
+    if (!finalBarcode) {
+      let unique = false;
+      while (!unique) {
+        const candidate = generateBarcode();
+        const exists = await Product.findOne({ barcode: candidate });
+        if (!exists) {
+          finalBarcode = candidate;
+          unique = true;
+        }
+      }
+    }
+
+    const product = new Product({ ...data, barcode: finalBarcode });
     await product.save();
+
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+    console.error("Error creating product:", error);
+    return NextResponse.json(
+      { error: "Failed to create product" },
+      { status: 500 }
+    );
   }
 }

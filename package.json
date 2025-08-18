@@ -26,6 +26,7 @@
     "@react-aria/visually-hidden": "3.8.26",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/papaparse": "^5.3.16",
+    "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "clsx": "2.1.1",
     "date-fns": "^4.1.0",

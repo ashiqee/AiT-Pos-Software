@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@heroui/button';
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@heroui/modal';
-import { Input, Textarea } from '@heroui/input';
+import { Input } from '@heroui/input';
 import { Select, SelectItem } from '@heroui/select';
 import { Card, CardHeader, CardBody } from '@heroui/card';
 import { Divider } from '@heroui/divider';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Edit } from 'lucide-react';
+import { addToast } from '@heroui/react';
 import { toast } from 'sonner';
 
 
@@ -24,11 +25,30 @@ interface Category {
   name: string;
 }
 
-interface AddProductModalProps {
-  onProductAdded?: () => void;
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  totalSold: number;
+  sellingPrice: number;
+  cost: number;
+  totalQuantity: number;
+  availableStock: number;
+  category: Category;
+  batches: Batch[];
+  sku: string;
+  barcode: string;
+  imageUrl: string;
+  inStock: boolean;
+  stockLevel: "high" | "low" | "out";
 }
 
-export default function AddProductModal({ onProductAdded }: AddProductModalProps) {
+interface EditProductModalProps {
+  product: Product;
+  onProductUpdated: () => void;
+}
+
+export default function EditProductModal({ product, onProductUpdated }: EditProductModalProps) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,19 +60,35 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     sellingPrice: '',
     category: '',
     sku: '',
+    barcode: '',
     imageUrl: ''
   });
   
   // Batches state
-  const [batches, setBatches] = useState<Batch[]>([
-    {
-      purchaseDate: new Date().toISOString().split('T')[0],
-      quantity: 0,
-      unitCost: 0,
-      supplier: '',
-      batchNumber: ''
+  const [batches, setBatches] = useState<Batch[]>([]);
+
+  // Initialize form when product changes
+  useEffect(() => {
+    if (product) {
+      setProductData({
+        name: product.name,
+        description: product.description || '',
+        sellingPrice: product.sellingPrice.toString(),
+        category: product.category._id,
+        sku: product.sku || '',
+        barcode: product.barcode || '',
+        imageUrl: product.imageUrl || ''
+      });
+      
+      setBatches(product.batches.map(batch => ({
+        purchaseDate: new Date(batch.purchaseDate).toISOString().split('T')[0],
+        quantity: batch.quantity,
+        unitCost: batch.unitCost,
+        supplier: batch.supplier || '',
+        batchNumber: batch.batchNumber || ''
+      })));
     }
-  ]);
+  }, [product]);
 
   // Fetch categories
   useEffect(() => {
@@ -63,14 +99,17 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
         setCategories(data);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        toast.error('Failed to load categories');
+        addToast({
+              title: "Categories",
+              description: 'Failed to load categories',
+              color: "warning",
+            })
+        
       }
     };
     
     fetchCategories();
   }, []);
-
-
 
   // Handle product form changes
   const handleProductChange = (field: string, value: string) => {
@@ -151,47 +190,28 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
         }))
       };
       
-      const response = await fetch('/api/products', {
-        method: 'POST',
+      const response = await fetch(`/api/products/${product._id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create product');
+        throw new Error(error.error || 'Failed to update product');
       }
       
-      const newProduct = await response.json();
-      toast.success('Product created successfully');
-      
-      // Reset form
-      setProductData({
-        name: '',
-        description: '',
-        sellingPrice: '',
-        category: '',
-        sku: '',
-       
-        imageUrl: ''
-      });
-      
-      setBatches([{
-        purchaseDate: new Date().toISOString().split('T')[0],
-        quantity: 0,
-        unitCost: 0,
-        supplier: '',
-        batchNumber: ''
-      }]);
+      const updatedProduct = await response.json();
+      toast.success('Product updated successfully');
       
       // Notify parent component
-    //   onProductAdded();
+      onProductUpdated();
       
       // Close modal
       onClose();
     } catch (error) {
-      console.error('Error creating product:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create product');
+      console.error('Error updating product:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update product');
     } finally {
       setIsLoading(false);
     }
@@ -200,11 +220,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
   return (
     <>
       <Button 
-        color="primary" 
-        startContent={<Plus size={16} />}
+        isIconOnly 
+        size="sm" 
+        variant="light"
         onPress={onOpen}
       >
-        Add Product
+        <Edit size={16} />
       </Button>
       
       <Modal 
@@ -217,7 +238,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                Add New Product
+                Edit Product
               </ModalHeader>
               <ModalBody>
                 <div className="space-y-4">
@@ -236,7 +257,13 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                           isRequired
                         />
                         
-                                            
+                        <Input
+                          label="SKU"
+                          placeholder="Enter SKU"
+                          value={productData.sku}
+                          onValueChange={(value) => handleProductChange('sku', value)}
+                        />
+                        
                         <Input
                           type="number"
                           label="Selling Price"
@@ -261,7 +288,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                           ))}
                         </Select>
                         
-                       
+                        <Input
+                          label="Barcode"
+                          placeholder="Enter barcode"
+                          value={productData.barcode}
+                          onValueChange={(value) => handleProductChange('barcode', value)}
+                        />
                         
                         <Input
                           label="Image URL"
@@ -271,8 +303,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                         />
                       </div>
                       
-                      <Textarea
-                      rows={3}
+                      <Input
                         label="Description"
                         placeholder="Enter product description"
                         value={productData.description}
@@ -374,7 +405,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                   isLoading={isLoading}
                   startContent={<Save size={16} />}
                 >
-                  Create Product
+                  Update Product
                 </Button>
               </ModalFooter>
             </>

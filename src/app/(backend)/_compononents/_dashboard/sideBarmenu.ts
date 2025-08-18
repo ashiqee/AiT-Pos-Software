@@ -7,6 +7,7 @@ import {
   Users,
   Settings,
   FileUp,
+  SatelliteDish,
 } from "lucide-react";
 
 export const roleBasedSidebarMenu: Record<
@@ -45,7 +46,12 @@ export const roleBasedSidebarMenu: Record<
     },
     {
       title: "Sales",
-      items: [{ label: "Sales", href: "/dashboard/sales", icon: ShoppingCart }],
+      collapsible: true,
+      items: [
+       { label: "Sales", href: "/dashboard/sales", icon: ShoppingCart },
+        { label: "POS", href: "/pos", icon: SatelliteDish },
+      ],
+     
     },
     {
       title: "Reports",

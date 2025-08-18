@@ -1,6 +1,20 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+interface Batch {
+  purchaseDate: string;
+  quantity: number;
+  unitCost: number;
+  supplier: string;
+  batchNumber: string;
+}
+
+interface Category {
+  _id: string;
+  name: string;
+}
+
+
 interface Product {
   _id: string;
   name: string;
@@ -9,12 +23,16 @@ interface Product {
   sellingPrice: number;
   cost: number;
   totalQuantity: number;
-  category: { name: string };
+  availableStock: number;
+  category: Category;
+  batches: Batch[];
   sku: string;
   barcode: string;
   imageUrl: string;
   inStock: boolean;
   stockLevel: "high" | "low" | "out";
+   createdAt: string;
+  updatedAt: string;
 }
 
 interface ProductSummary {

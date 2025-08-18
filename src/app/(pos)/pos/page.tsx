@@ -366,13 +366,15 @@ export default function POSPage() {
                               <TableCell>
                                 <div className="flex gap-2">
                                   <span className="text-sm">{i + 1}.</span>{" "}
-                                  <Image
+                                 {
+                                  item.product.imageUrl &&  <Image
                                     src={item.product.imageUrl}
                                     alt={item.product.name}
                                     width={400}
                                     height={400}
                                     className="w-12 h-12 rounded-md object-cover"
                                   />
+                                 }
                                   <div className="font-medium text-[12px]">
                                     {item.product.name}
 

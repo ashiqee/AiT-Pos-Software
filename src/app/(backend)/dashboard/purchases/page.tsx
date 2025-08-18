@@ -34,7 +34,7 @@ interface Product {
   sku: string;
   barcode: string;
   sellingPrice: number;
-  totalQuantity: number;
+  availableStock: number;
   category: { name: string };
   imageUrl: string;
 }
@@ -284,7 +284,7 @@ export default function PurchasePage() {
                             Selling Price: &#x09F3;{product.sellingPrice.toFixed(2)}
                           </p>
                           <p className="text-xs mt-1">
-                            Current Stock: {product.totalQuantity}
+                            Current Stock: {product.availableStock}
                           </p>
                         </div>
                      <div className="flex flex-col justify-center items-center">

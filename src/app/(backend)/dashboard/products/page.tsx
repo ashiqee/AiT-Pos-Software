@@ -24,8 +24,14 @@ import {
 } from "lucide-react";
 import { useProducts } from "@/app/hooks/useProducts";
 import AddProductModal from "../../_compononents/_products/_modals/AddProductModal";
+import { StockChip } from "../../_compononents/_dashboard/_ui/StockChip";
+import DeleteAlert from "../../_compononents/_products/_modals/DeleteAlert";
+import EditProductModal from "../../_compononents/_products/_modals/EditProductModal";
+import ViewProductDetailsModal from "../../_compononents/_products/_modals/ViewProductDetailsModal";
+import { useUser } from "@/app/hooks/useUser";
 
 export default function ProductsManagePage() {
+  const {role,loading}=useUser()
   const {
     products,
     summary,
@@ -42,17 +48,20 @@ export default function ProductsManagePage() {
     goToPage,
     nextPage,
     prevPage,
+    refreshProducts,
     clearFilters,
   } = useProducts();
 
   // Clear barcode search
   const clearBarcode = () => setBarcode(null);
 
+ 
+
   return (
     <div>
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
+      <div className="flex w-full flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="w-full ">
           <h1 className="text-xl lg:text-2xl font-bold">Product Management</h1>
           <p className="text-gray-600">Manage your product inventory</p>
         </div>
@@ -227,9 +236,9 @@ export default function ProductsManagePage() {
         </CardHeader>
         <CardBody>
           {isLoading ? (
-            <div className="text-center py-8">Loading products...</div>
+            <div className="text-center py-4">Loading products...</div>
           ) : products.length === 0 ? (
-            <div className="text-center py-8">
+            <div className="text-center py-4">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No products found
@@ -286,33 +295,20 @@ export default function ProductsManagePage() {
                     </TableCell>
                     <TableCell>${product.sellingPrice.toFixed(2)}</TableCell>
                     <TableCell>{product.totalSold}</TableCell>
-                    <TableCell>{product.totalQuantity}</TableCell>
+                    <TableCell>{product.availableStock}</TableCell>
                     <TableCell>
-                      <span
-                        className={`px-3 pb-1 capitalize rounded-md ${
-                          product.stockLevel === "out"
-                            ? "bg-red-700 text-white"
-                            : product.stockLevel === "high"
-                              ? "bg-green-700 text-white"
-                              : "bg-yellow-400 text-black"
-                        }`}
-                      >
-                        {product.stockLevel}
-                      </span>
+                    <StockChip stockLevel={product.stockLevel} />
+
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button isIconOnly size="sm" variant="light">
-                          <Edit size={16} />
-                        </Button>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        <ViewProductDetailsModal product={product} />
+                       {
+                        role === "admin" && <>
+                        <EditProductModal product={product} onProductUpdated={refreshProducts}/>
+                      <DeleteAlert id={product._id}/>
+                        </>
+                       }
                       </div>
                     </TableCell>
                   </TableRow>
