@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     
     // Payment method filter
     if (paymentFilter && paymentFilter !== 'all') {
-      query.paymentStatus = paymentFilter;
+      query.paymentMethod = paymentFilter;
     }
 
     // Fetch sales with pagination
@@ -151,8 +151,6 @@ async function calculateSummary(baseQuery: any) {
 
 
 
-
-
 // POST SALE 
 export async function POST(request: NextRequest) {
   try {
@@ -160,7 +158,7 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
+    
     await dbConnect();
     const body = await request.json();
     const {
@@ -174,29 +172,31 @@ export async function POST(request: NextRequest) {
       customer,
     } = body;
 
-    console.log(body, "RES");
-
     // First, validate all products and check stock availability
     const productIds = items.map((item: any) => item.product);
     const products = await Product.find({ _id: { $in: productIds } });
-
+    
     // Create a map for easy product lookup
     const productMap = new Map<string, ISaleProduct>();
     products.forEach((product: any) => {
       productMap.set(product._id.toString(), product);
     });
 
-    // Validate all items before processing
+    // Validate all items and calculate costs before processing
+    const saleItems = [];
+    let totalCost = 0;
+    let totalProfit = 0;
+
     for (const item of items) {
       const product = productMap.get(item.product);
-
+      
       if (!product) {
         return NextResponse.json(
           { error: `Product not found: ${item.product}` },
           { status: 400 }
         );
       }
-
+      
       if (product.availableStock! < item.quantity) {
         return NextResponse.json(
           {
@@ -205,13 +205,38 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // Calculate average unit cost from batches
+      const totalBatchCost = product.batches.reduce((sum: number, batch: any) => 
+        sum + (batch.quantity * batch.unitCost), 0
+      );
+      const totalBatchQuantity = product.batches.reduce((sum: number, batch: any) => 
+        sum + batch.quantity, 0
+      );
+      const averageUnitCost = totalBatchQuantity > 0 ? totalBatchCost / totalBatchQuantity : 0;
+      
+      // Calculate profit for this item
+      const itemCost = averageUnitCost * item.quantity;
+      const itemProfit = (item.price - averageUnitCost) * item.quantity;
+      
+      totalCost += itemCost;
+      totalProfit += itemProfit;
+
+      // Create sale item with cost and profit
+      saleItems.push({
+        product: item.product,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total,
+        unitCost: averageUnitCost,
+        profit: itemProfit
+      });
     }
 
     // Process each item to record the sale
     try {
       for (const item of items) {
         const product = productMap.get(item.product);
-
         if (product) {
           // Record the sale using the product's method
           await product.recordSale(item.quantity);
@@ -221,8 +246,7 @@ export async function POST(request: NextRequest) {
       console.error("Sale recording error:", error);
       return NextResponse.json(
         {
-          error:
-            error instanceof Error ? error.message : "Failed to record sale",
+          error: error instanceof Error ? error.message : "Failed to record sale",
         },
         { status: 400 }
       );
@@ -231,7 +255,7 @@ export async function POST(request: NextRequest) {
     // Create the sale record
     try {
       const sale = new Sale({
-        items,
+        items: saleItems,
         subtotal,
         discount,
         tax,
@@ -241,15 +265,21 @@ export async function POST(request: NextRequest) {
         customer,
         user: session.user.id,
       });
+      
       // Save first
       await sale.save();
-
+      
       // Populate the product inside items
       await sale.populate("items.product", "name sku");
-      return NextResponse.json(sale);
+      
+      return NextResponse.json({
+        ...sale.toObject(),
+        totalCost,
+        totalProfit
+      });
     } catch (error) {
       console.error("Sale creation error:", error);
-
+      
       // Attempt to revert sale recordings if sale creation fails
       try {
         for (const item of items) {
@@ -263,7 +293,7 @@ export async function POST(request: NextRequest) {
       } catch (revertError) {
         console.error("Failed to revert sale recordings:", revertError);
       }
-
+      
       return NextResponse.json(
         { error: "Failed to create sale record" },
         { status: 500 }

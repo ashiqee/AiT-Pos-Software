@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Supplier filter
-    if (supplierFilter && supplierFilter !== 'all') {
+    if (supplierFilter && supplierFilter !== 'All') {
       query['batches.supplier'] = supplierFilter;
     }
     

@@ -5,6 +5,8 @@ const saleItemSchema = new Schema({
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
   total: { type: Number, required: true },
+  unitCost: { type: Number, required: true }, // Add this field
+  profit: { type: Number, required: true }, // Add this field
 });
 const customerSchema = new Schema({
  customerName: {type:String},

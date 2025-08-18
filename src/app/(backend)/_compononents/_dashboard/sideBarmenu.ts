@@ -23,8 +23,8 @@ export const roleBasedSidebarMenu: Record<
       title: "Dashboard",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Reports", href: "/dashboard/report", icon: BarChart3 },
-        { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+        // { label: "Reports", href: "/dashboard/report", icon: BarChart3 },
+        // { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
       ],
     },
     {
