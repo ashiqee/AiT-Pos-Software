@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     
     // Payment method filter
     if (paymentFilter && paymentFilter !== 'all') {
-      query.paymentMethod = paymentFilter;
+      query.paymentStatus = paymentFilter;
     }
 
     // Fetch sales with pagination

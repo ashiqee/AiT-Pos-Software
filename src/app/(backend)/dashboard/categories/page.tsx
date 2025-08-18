@@ -132,7 +132,7 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Categories</h1>

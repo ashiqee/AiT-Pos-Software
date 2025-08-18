@@ -180,15 +180,15 @@ export default function SalesPage() {
               </Select>
               
               <Select
-                placeholder="Payment Method"
+                placeholder="Payment Status"
                 selectedKeys={paymentFilter ? [paymentFilter] : []}
                 onSelectionChange={(keys) => setPaymentFilter(Array.from(keys)[0] as string)}
                 className="w-full lg:w-48"
               >
-                <SelectItem key="all" textValue="all">All Methods</SelectItem>
-                <SelectItem key="cash" textValue="cash">Cash</SelectItem>
-                <SelectItem key="card" textValue="card">Card</SelectItem>
-                <SelectItem key="check" textValue="check">Check</SelectItem>
+                <SelectItem key="all" textValue="all">All</SelectItem>
+                <SelectItem key="Paid" textValue="Paid">Paid</SelectItem>
+                <SelectItem key="Partial" textValue="Partial">Partial</SelectItem>
+                <SelectItem key="Unpaid" textValue="Unpaid">Unpaid</SelectItem>
               </Select>
             </div>
           </div>

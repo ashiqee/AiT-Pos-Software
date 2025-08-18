@@ -105,13 +105,13 @@ const supplierOptions = [
   return (
     <div>
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Purchases Report</h1>
+      <div className="flex flex-col  md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div >
+          <h1 className="2xl:text-2xl  text-xl font-bold">Purchases Report</h1>
           <p className="text-gray-600">Track inventory purchases and supplier performance</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-3  ">
           <Button 
             color="primary" 
             variant="flat"
