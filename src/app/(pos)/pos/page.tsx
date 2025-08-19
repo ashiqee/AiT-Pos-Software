@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import ProfileBar from "@/components/shared/ProfileBar";
-import { NumberInput, ScrollShadow } from "@heroui/react";
+import { addToast, NumberInput, ScrollShadow } from "@heroui/react";
 import { ThemeSwitch } from "@/components/theme-switch";
 
 interface CartProduct {
@@ -70,6 +70,7 @@ export default function POSPage() {
   const [receiptData, setReceiptData] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPartialPay, setIsPartialPay] = useState(false);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -108,7 +109,10 @@ export default function POSPage() {
   }, []);
 
   useEffect(() => {
-    setAmountPaid(total); // initial load
+    const delayDebounce = setTimeout(()=>{
+      setAmountPaid(total); // initial load
+    },300)
+    return ()=>clearTimeout(delayDebounce);
   }, [total]);
 
   // Trigger search with debounce
@@ -133,6 +137,10 @@ export default function POSPage() {
             : item
         );
       } else {
+        addToast({
+          title:product.name
+          
+           })
         return [...prevCart, { product, quantity: 1 }];
       }
     });
@@ -231,7 +239,7 @@ export default function POSPage() {
 
   // Determine button text based on payment status
   const buttonText =
-    amountPaidNum < totalNum ? "Process Partial Payment" : "Process Sale";
+    isPartialPay ? "Process Partial Payment" : "Process Sale";
 
   return (
     <div className="flex  flex-col ">
@@ -499,21 +507,25 @@ export default function POSPage() {
           {/* Payment Method Selection */}
           <div className="flex gap-3">
             <button
-              onClick={() => setAmountPaid(total)}
-              className={`px-3 py-1 rounded ${amountPaid === total ? "bg-green-600" : "bg-gray-600"}`}
+              onClick={() => {setAmountPaid(total),
+                setIsPartialPay(false)
+              }}
+              className={`px-3 py-1 rounded ${!isPartialPay ? "bg-green-600" : "bg-gray-600"}`}
             >
               Full Payment
             </button>
             <button
-              onClick={() => setAmountPaid("")}
-              className={`px-3 py-1 rounded ${amountPaid === "" ? "bg-blue-600" : "bg-gray-600"}`}
+              onClick={() => {setAmountPaid(""),
+                setIsPartialPay(true)}
+              }
+              className={`px-3 py-1 rounded ${isPartialPay ? "bg-blue-600" : "bg-gray-600"}`}
             >
               Partial Payment
             </button>
           </div>
 
           {/* Conditional Rendering for Partial Payment */}
-          {amountPaid !== total && (
+          {amountPaid !== total && isPartialPay && (
             <>
               {/* Amount Paid */}
               <div className="flex justify-between items-center mt-3">

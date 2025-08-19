@@ -36,7 +36,7 @@ export default function AnalyticsDashboard() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'BDT'
     }).format(amount);
   };
 
@@ -64,6 +64,10 @@ export default function AnalyticsDashboard() {
         </Card>
       </div>
     );
+  }
+
+  if(!analytics){
+    return <>Not avaibable</>
   }
 
   return (
@@ -106,14 +110,22 @@ export default function AnalyticsDashboard() {
           <CardBody className="p-4">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                <DollarSign size={20} className="text-blue-600" />
+                <span className="text-blue-600">
+                    &#2547;
+                </span>
+              
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Revenue</p>
-                <p className="text-xl font-bold">{formatCurrency(analytics?.summary.totalRevenue)}</p>
-                <p className="text-xs text-green-600">
+                {analytics?.summary.totalRevenue &&  <p className="text-xl font-bold">{formatCurrency(analytics?.summary.totalRevenue)}</p>}
+                
+
+                {
+                    analytics?.summary.revenueGrowth &&  <p className="text-xs text-green-600">
                   +{formatPercent(analytics?.summary.revenueGrowth)} from last period
                 </p>
+                }
+               
               </div>
             </div>
           </CardBody>
@@ -127,10 +139,16 @@ export default function AnalyticsDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Profit</p>
-                <p className="text-xl font-bold">{formatCurrency(analytics.summary.totalProfit)}</p>
-                <p className="text-xs text-green-600">
+                {
+                    analytics?.summary.totalProfit &&  <p className="text-xl font-bold">{formatCurrency(analytics.summary.totalProfit)}</p>
+                }
+                {
+                    analytics?.summary.profitGrowth && <p className="text-xs text-green-600">
                   +{formatPercent(analytics.summary.profitGrowth)} from last period
                 </p>
+                }
+               
+                
               </div>
             </div>
           </CardBody>
@@ -144,10 +162,17 @@ export default function AnalyticsDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Items Sold</p>
-                <p className="text-xl font-bold">{analytics.summary.totalItemsSold.toLocaleString()}</p>
-                <p className="text-xs text-green-600">
+
+                {
+                    analytics?.summary.totalItemsSold &&  <p className="text-xl font-bold">{analytics.summary.totalItemsSold.toLocaleString()}</p>
+                }
+                {
+                    analytics?.summary.totalItemsSold &&   <p className="text-xs text-green-600">
                   +{formatPercent(analytics.summary.itemsGrowth)} from last period
                 </p>
+                }
+               
+              
               </div>
             </div>
           </CardBody>
@@ -161,10 +186,18 @@ export default function AnalyticsDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Customers</p>
-                <p className="text-xl font-bold">{analytics.summary.totalCustomers}</p>
-                <p className="text-xs text-green-600">
+
+                {
+                    analytics?.summary.totalCustomers && <p className="text-xl font-bold">{analytics.summary.totalCustomers}</p>
+                }
+                
+
+                {
+                    analytics?.summary.customersGrowth && <p className="text-xs text-green-600">
                   +{formatPercent(analytics.summary.customersGrowth)} from last period
                 </p>
+                }
+                
               </div>
             </div>
           </CardBody>
@@ -210,7 +243,7 @@ export default function AnalyticsDashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${(percent! * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="total"
