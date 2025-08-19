@@ -78,12 +78,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort customers by totalDue (descending) or last purchase
-    customers.sort((a, b) => {
-      if (statusFilter === 'due') {
-        return b.totalDue - a.totalDue;
-      }
-      return new Date(b.lastPurchase) - new Date(a.lastPurchase);
-    });
+  customers.sort((a, b) => {
+  if (statusFilter === 'due') {
+    return b.totalDue - a.totalDue; // Both are numbers
+  }
+  // Convert dates to numbers (milliseconds) for consistent return type
+  return new Date(b.lastPurchase).getTime() - new Date(a.lastPurchase).getTime();
+});
 
     // Get total count for pagination
     const totalCount = customers.length;
