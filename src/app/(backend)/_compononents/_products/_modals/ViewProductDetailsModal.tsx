@@ -7,6 +7,7 @@ import { Divider } from '@heroui/divider';
 import { Badge } from '@heroui/badge';
 import { Eye, Package, DollarSign, Calendar, User, Hash, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
+import ProductImage from '../../_dashboard/_ui/ProductImage';
 
 interface Batch {
   purchaseDate: string;
@@ -107,7 +108,7 @@ export default function ViewProductDetailsModal({ product }: ViewProductDetailsM
                       <h3 className="text-lg font-semibold">Product Overview</h3>
                     </CardHeader>
                     <CardBody>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Hash size={16} className="text-gray-500" />
@@ -170,6 +171,13 @@ export default function ViewProductDetailsModal({ product }: ViewProductDetailsM
                             <span className="font-medium">{product.totalSold}</span>
                           </div>
                         </div>
+
+
+<ProductImage
+  imageUrl={product.imageUrl}
+  alt={product.name}
+  title={product.name}
+/>
                       </div>
                       
                       {product.description && (

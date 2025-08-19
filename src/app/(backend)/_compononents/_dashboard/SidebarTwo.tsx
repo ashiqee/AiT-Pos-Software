@@ -52,7 +52,7 @@ const SidebarTwo = ({
   collapsed,
   toggleCollapse,
 }: {
-  role: "admin" | "manager" | "salesman" | "customer";
+  role: "admin" | "manager" | "salesmen" | "customer";
   collapsed?: boolean;
   toggleCollapse: () => void;
 }) => {

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 export const roleBasedSidebarMenu: Record<
-  "admin" | "manager" | "salesman" | "customer",
+  "admin" | "manager" | "salesmen" | "customer",
   {
     title: string;
     collapsible?: boolean;
@@ -62,9 +62,13 @@ export const roleBasedSidebarMenu: Record<
       items: [{ label: "Customers", href: "/dashboard/customers", icon: Users }],
     },
     {
-      title: "Settings",
-      items: [{ label: "Settings", href: "/settings", icon: Settings }],
+      title: "Users Manage",
+      items: [{ label: "Users Manage", href: "/dashboard/users", icon: Users }],
     },
+    // {
+    //   title: "Settings",
+    //   items: [{ label: "Settings", href: "/settings", icon: Settings }],
+    // },
   ],
 
   manager: [
@@ -91,14 +95,16 @@ export const roleBasedSidebarMenu: Record<
     },
   ],
 
-  salesman: [
+  salesmen: [
     {
       title: "Dashboard",
       items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
     },
     {
       title: "Sales",
-      items: [{ label: "Sales", href: "/dashboard/sales", icon: ShoppingCart }],
+      items: [{ label: "Sales", href: "/dashboard/sales", icon: ShoppingCart },
+         { label: "POS", href: "/pos", icon: SatelliteDish },
+      ],
     },
     {
       title: "Customers",

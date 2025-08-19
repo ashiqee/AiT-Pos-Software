@@ -10,7 +10,7 @@ export interface IUser extends Document {
   password?: string;
   isDeleted: boolean;
   status: "active" | "inactive";
-  role: "super-admin" | "admin" | "student" | "teacher" | "guest";
+  role: "super-admin" | "admin" | "manager" | "salesmen" | "customer";
   designation?: string;
 }
 
@@ -32,7 +32,7 @@ const UserSchema = new Schema<IUser>(
     isDeleted: { type: Boolean, default: false },
     role: {
       type: String,
-      enum: ["super-admin", "admin", "student", "teacher", "guest"],
+      enum: ["super-admin", "admin", "manager", "salesmen", "customer"],
       required: true,
     },
   },

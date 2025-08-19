@@ -9,7 +9,7 @@ import userModel from "@/models/user.model";
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  const allowedRoles = ['admin', 'super-admin', 'guest', 'teacher'];
+  const allowedRoles = ["super-admin" , "admin" , "manager", "salesmen" , "customer"];
 
   if (!session || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

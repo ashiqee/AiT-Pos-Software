@@ -19,14 +19,14 @@ export async function POST(req: Request) {
 
 
   // Parse the request body
-  const { name, email, studentId, password, role,mobileNo,designation,profilePic } = await req.json();
+  const { name, email,  password, role,mobileNo,designation,profilePic } = await req.json();
 
  
 
   // Validate the role
   if (
     !role ||
-    !["super-admin", "admin", "student", "teacher", "guest"].includes(role)
+    !["super-admin" , "admin" , "manager", "salesmen" , "customer"].includes(role)
   ) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
@@ -46,11 +46,11 @@ export async function POST(req: Request) {
   }
 
   // Check if a user already exists with the same studentId
-  if (studentId) {
-    const existingStudentUser = await userModel.findOne({ studentId });
-    if (existingStudentUser) {
+  if (mobileNo) {
+    const existingUser = await userModel.findOne({ mobileNo });
+    if (existingUser) {
       return NextResponse.json(
-        { error: "Student ID already exists" },
+        { error: "MobileNo  already exists" },
         { status: 400 }
       );
     }
@@ -63,7 +63,6 @@ export async function POST(req: Request) {
   const newUser = await userModel.create({
     name,
     email,
-    studentId,
     profilePic,
     password: hashedPassword,
     mobileNo,
@@ -80,41 +79,66 @@ export async function POST(req: Request) {
 
 
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  const allowedRoles = ['admin', 'super-admin', 'guest', 'teacher'];
+  const allowedRoles = ["super-admin" , "admin" ];
 
   if (!session || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-
+try{
   
+await dbConnect();
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || '';
+    const role = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
 
-  await dbConnect();
+    // Build query
+    let query: any = { isDeleted: false };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { mobileNo: { $regex: search, $options: 'i' } },
+        { studentId: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (role) {
+      query.role = role;
+    }
+    
+    if (status) {
+      query.status = status;
+    }
 
-  const searchParams = req.nextUrl.searchParams;
-  const search = searchParams.get("search") || "";
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const skip = (page - 1) * limit;
+    const users = await userModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-password');
 
- const query = {
-  isDeleted: false,
-  ...(search && {
-    $or: [
-      { name: { $regex: search, $options: "i" } },
-      { email: { $regex: search, $options: "i" } },
-      { mobile: { $regex: search, $options: "i" } },
-    ],
-  }),
-};
+    const total = await userModel.countDocuments(query);
 
-  const users = await userModel.find(query).skip(skip).limit(limit);
-  const total = await userModel.countDocuments(query);
-
-  return NextResponse.json({ users, total }, { status: 200 });
+    return NextResponse.json({
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+  }
 }
-
 

@@ -31,15 +31,13 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
-    if (pathname.startsWith("/dashboard/teacher") && role !== "teacher") {
+    if (pathname.startsWith("/dashboard/manager") && role !== "manager") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
-    if (pathname.startsWith("/dashboard/student") && role !== "student") {
+    if (pathname.startsWith("/dashboard/salesmen") && role !== "salesmen") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
-    if (pathname.startsWith("/dashboard/guest") && role !== "guest") {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
-    }
+   
   }
 
   // 🔐 Protect POS routes
