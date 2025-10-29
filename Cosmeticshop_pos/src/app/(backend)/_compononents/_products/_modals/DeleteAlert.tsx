@@ -11,7 +11,7 @@ import {
 } from "@heroui/react";
 import { Trash2 } from "lucide-react";
 
-export default function DeleteAlert({ id }: { id: string }) {
+export default function DeleteAlert({ id ,onProductUpdated}: { id: string,onProductUpdated:any }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const onConfirmDelete = async () => {
@@ -24,9 +24,10 @@ export default function DeleteAlert({ id }: { id: string }) {
     throw new Error(error.error || 'Failed to delete product');
   }
   
+  setIsOpen(false);
+  onProductUpdated?.()
   return response.json();
 
-    setIsOpen(false);
   };
 
 

@@ -77,7 +77,7 @@ export default function ProductsManagePage() {
               Bulk Import
             </Button>
           </Link>
-          <AddProductModal/>
+          <AddProductModal onProductAdded={refreshProducts}/>
         </div>
       </div>
 
@@ -306,7 +306,7 @@ export default function ProductsManagePage() {
                        {
                         role === "admin" && <>
                         <EditProductModal product={product} onProductUpdated={refreshProducts}/>
-                      <DeleteAlert id={product._id}/>
+                      <DeleteAlert id={product._id} onProductUpdated={refreshProducts}/>
                         </>
                        }
                       </div>

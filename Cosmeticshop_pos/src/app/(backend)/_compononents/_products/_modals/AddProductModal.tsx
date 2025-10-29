@@ -9,7 +9,8 @@ import { Card, CardHeader, CardBody } from '@heroui/card';
 import { Divider } from '@heroui/divider';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
-
+import ImageUploader from '../_uploader/ImageUploader';
+import { useForm, Controller } from 'react-hook-form';
 
 interface Batch {
   purchaseDate: string;
@@ -33,14 +34,16 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Product form state
-  const [productData, setProductData] = useState({
-    name: '',
-    description: '',
-    sellingPrice: '',
-    category: '',
-    sku: '',
-    imageUrl: ''
+  // Initialize form with react-hook-form
+  const { control, handleSubmit, setValue, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      name: '',
+      description: '',
+      sellingPrice: '',
+      category: '',
+      sku: '',
+      imageUrl: ''
+    }
   });
   
   // Batches state
@@ -69,13 +72,6 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     
     fetchCategories();
   }, []);
-
-
-
-  // Handle product form changes
-  const handleProductChange = (field: string, value: string) => {
-    setProductData(prev => ({ ...prev, [field]: value }));
-  };
 
   // Handle batch changes
   const handleBatchChange = (index: number, field: keyof Batch, value: string | number) => {
@@ -107,42 +103,21 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     }
   };
 
-  // Validate form
-  const validateForm = () => {
-    if (!productData.name.trim()) {
-      toast.error('Product name is required');
-      return false;
-    }
-    
-    if (!productData.sellingPrice || parseFloat(productData.sellingPrice) <= 0) {
-      toast.error('Valid selling price is required');
-      return false;
-    }
-    
-    if (!productData.category) {
-      toast.error('Category is required');
-      return false;
-    }
-    
+  // Submit form
+  const onSubmit = async (data: any) => {
+    // Validate batches
     if (batches.some(batch => batch.quantity <= 0 || batch.unitCost <= 0)) {
       toast.error('All batches must have valid quantity and unit cost');
-      return false;
+      return;
     }
-    
-    return true;
-  };
-
-  // Submit form
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
     
     setIsLoading(true);
     
     try {
       // Prepare data for API
       const payload = {
-        ...productData,
-        sellingPrice: parseFloat(productData.sellingPrice),
+        ...data,
+        sellingPrice: parseFloat(data.sellingPrice),
         batches: batches.map(batch => ({
           ...batch,
           quantity: parseInt(batch.quantity as any),
@@ -166,13 +141,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
       toast.success('Product created successfully');
       
       // Reset form
-      setProductData({
+      reset({
         name: '',
         description: '',
         sellingPrice: '',
         category: '',
         sku: '',
-       
         imageUrl: ''
       });
       
@@ -185,7 +159,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
       }]);
       
       // Notify parent component
-    //   onProductAdded();
+      onProductAdded?.();
       
       // Close modal
       onClose();
@@ -195,6 +169,11 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle form submission
+  const handleFormSubmit = () => {
+    handleSubmit(onSubmit)();
   };
 
   return (
@@ -220,145 +199,199 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                 Add New Product
               </ModalHeader>
               <ModalBody>
-                <div className="space-y-4">
-                  {/* Product Information */}
-                  <Card>
-                    <CardHeader>
-                      <h3 className="text-lg font-semibold">Product Information</h3>
-                    </CardHeader>
-                    <CardBody className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                          label="Product Name"
-                          placeholder="Enter product name"
-                          value={productData.name}
-                          onValueChange={(value) => handleProductChange('name', value)}
-                          isRequired
-                        />
-                        
-                                            
-                        <Input
-                          type="number"
-                          label="Selling Price"
-                          placeholder="0.00"
-                          value={productData.sellingPrice}
-                          onValueChange={(value) => handleProductChange('sellingPrice', value)}
-                          isRequired
-                          startContent="$"
-                        />
-                        
-                        <Select
-                          label="Category"
-                          placeholder="Select a category"
-                          selectedKeys={productData.category ? [productData.category] : []}
-                          onSelectionChange={(keys) => handleProductChange('category', Array.from(keys)[0] as string)}
-                          isRequired
-                        >
-                          {categories.map((category) => (
-                            <SelectItem key={category._id} textValue={category.name}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </Select>
-                        
-                       
-                        
-                        <Input
-                          label="Image URL"
-                          placeholder="Enter image URL"
-                          value={productData.imageUrl}
-                          onValueChange={(value) => handleProductChange('imageUrl', value)}
-                        />
-                      </div>
-                      
-                      <Textarea
-                      rows={3}
-                        label="Description"
-                        placeholder="Enter product description"
-                        value={productData.description}
-                        onValueChange={(value) => handleProductChange('description', value)}
-                      />
-                    </CardBody>
-                  </Card>
-                  
-                  {/* Batches */}
-                  <Card>
-                    <CardHeader className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Inventory Batches</h3>
-                      <Button 
-                        size="sm" 
-                        color="primary" 
-                        variant="flat"
-                        startContent={<Plus size={16} />}
-                        onPress={addBatch}
-                      >
-                        Add Batch
-                      </Button>
-                    </CardHeader>
-                    <CardBody className="space-y-4">
-                      {batches.map((batch, index) => (
-                        <div key={index} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-3">
-                            <h4 className="font-medium">Batch #{index + 1}</h4>
-                            {batches.length > 1 && (
-                              <Button 
-                                isIconOnly 
-                                size="sm" 
-                                color="danger" 
-                                variant="light"
-                                onPress={() => removeBatch(index)}
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              type="date"
-                              label="Purchase Date"
-                              value={batch.purchaseDate}
-                              onValueChange={(value) => handleBatchChange(index, 'purchaseDate', value)}
-                            />
-                            
-                            <Input
-                              type="number"
-                              label="Quantity"
-                              placeholder="0"
-                              value={batch.quantity.toString()}
-                              onValueChange={(value) => handleBatchChange(index, 'quantity', parseInt(value) || 0)}
-                              isRequired
-                            />
-                            
-                            <Input
-                              type="number"
-                              label="Unit Cost"
-                              placeholder="0.00"
-                              value={batch.unitCost.toString()}
-                              onValueChange={(value) => handleBatchChange(index, 'unitCost', parseFloat(value) || 0)}
-                              isRequired
-                              startContent="$"
-                            />
-                            
-                            <Input
-                              label="Supplier"
-                              placeholder="Enter supplier name"
-                              value={batch.supplier}
-                              onValueChange={(value) => handleBatchChange(index, 'supplier', value)}
-                            />
-                            
-                            <Input
-                              label="Batch Number"
-                              placeholder="Enter batch number"
-                              value={batch.batchNumber}
-                              onValueChange={(value) => handleBatchChange(index, 'batchNumber', value)}
-                            />
-                          </div>
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <div className="space-y-4">
+                    {/* Product Information */}
+                    <Card>
+                      <CardHeader>
+                        <h3 className="text-lg font-semibold">Product Information</h3>
+                      </CardHeader>
+                      <CardBody className="space-y-4">
+                        {/* Image Upload Section */}
+                        <div className="pt-2">
+                          <ImageUploader
+                            name="imageUrl"
+                            label="Product Image"
+                            control={control}
+                            setValue={setValue}
+                          />
                         </div>
-                      ))}
-                    </CardBody>
-                  </Card>
-                </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Controller
+                            name="name"
+                            control={control}
+                            rules={{ required: 'Product name is required' }}
+                            render={({ field }) => (
+                              <Input
+                                label="Product Name"
+                                placeholder="Enter product name"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                isRequired
+                                isInvalid={!!errors.name}
+                                errorMessage={errors.name?.message}
+                              />
+                            )}
+                          />
+                          
+                          <Controller
+                            name="sellingPrice"
+                            control={control}
+                            rules={{ 
+                              required: 'Selling price is required',
+                              pattern: {
+                                value: /^[0-9]*\.?[0-9]+$/,
+                                message: 'Please enter a valid price'
+                              }
+                            }}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                label="Selling Price"
+                                placeholder="0.00"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                isRequired
+                                startContent="$"
+                                isInvalid={!!errors.sellingPrice}
+                                errorMessage={errors.sellingPrice?.message}
+                              />
+                            )}
+                          />
+                          
+                          <Controller
+                            name="category"
+                            control={control}
+                            rules={{ required: 'Category is required' }}
+                            render={({ field }) => (
+                              <Select
+                                label="Category"
+                                placeholder="Select a category"
+                                selectedKeys={field.value ? [field.value] : []}
+                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
+                                isRequired
+                                isInvalid={!!errors.category}
+                                errorMessage={errors.category?.message}
+                              >
+                                {categories.map((category) => (
+                                  <SelectItem key={category._id} textValue={category.name}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </Select>
+                            )}
+                          />
+                          
+                          <Controller
+                            name="sku"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                label="SKU"
+                                placeholder="Enter SKU (optional)"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              />
+                            )}
+                          />
+                        </div>
+                        
+                        <Controller
+                          name="description"
+                          control={control}
+                          render={({ field }) => (
+                            <Textarea
+                              rows={3}
+                              label="Description"
+                              placeholder="Enter product description"
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            />
+                          )}
+                        />
+                      </CardBody>
+                    </Card>
+                    
+                    {/* Batches */}
+                    <Card>
+                      <CardHeader className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">Inventory Batches</h3>
+                        <Button 
+                          size="sm" 
+                          color="primary" 
+                          variant="flat"
+                          startContent={<Plus size={16} />}
+                          onPress={addBatch}
+                        >
+                          Add Batch
+                        </Button>
+                      </CardHeader>
+                      <CardBody className="space-y-4">
+                        {batches.map((batch, index) => (
+                          <div key={index} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-medium">Batch #{index + 1}</h4>
+                              {batches.length > 1 && (
+                                <Button 
+                                  isIconOnly 
+                                  size="sm" 
+                                  color="danger" 
+                                  variant="light"
+                                  onPress={() => removeBatch(index)}
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Input
+                                type="date"
+                                label="Purchase Date"
+                                value={batch.purchaseDate}
+                                onValueChange={(value) => handleBatchChange(index, 'purchaseDate', value)}
+                              />
+                              
+                              <Input
+                                type="number"
+                                label="Quantity"
+                                placeholder="0"
+                                value={batch.quantity.toString()}
+                                onValueChange={(value) => handleBatchChange(index, 'quantity', parseInt(value) || 0)}
+                                isRequired
+                              />
+                              
+                              <Input
+                                type="number"
+                                label="Unit Cost"
+                                placeholder="0.00"
+                                value={batch.unitCost.toString()}
+                                onValueChange={(value) => handleBatchChange(index, 'unitCost', parseFloat(value) || 0)}
+                                isRequired
+                                startContent="$"
+                              />
+                              
+                              <Input
+                                label="Supplier"
+                                placeholder="Enter supplier name"
+                                value={batch.supplier}
+                                onValueChange={(value) => handleBatchChange(index, 'supplier', value)}
+                              />
+                              
+                              <Input
+                                label="Batch Number"
+                                placeholder="Enter batch number"
+                                value={batch.batchNumber}
+                                onValueChange={(value) => handleBatchChange(index, 'batchNumber', value)}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </CardBody>
+                    </Card>
+                  </div>
+                </form>
               </ModalBody>
               <ModalFooter>
                 <Button 
@@ -370,7 +403,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                 </Button>
                 <Button 
                   color="primary" 
-                  onPress={handleSubmit}
+                  onPress={handleFormSubmit}
                   isLoading={isLoading}
                   startContent={<Save size={16} />}
                 >

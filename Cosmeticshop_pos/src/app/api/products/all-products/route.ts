@@ -102,11 +102,24 @@ export async function GET(request: NextRequest) {
 
     // 🔹 Paginated products (latest first)
     const products = await Product.aggregate([
-      ...pipeline,
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-    ]);
+  ...pipeline,
+  // Add $lookup to populate category (place this before $sort/$skip/$limit)
+  {
+    $lookup: {
+      from: 'categories',  // Collection name for Category model (lowercase plural, adjust if needed)
+      localField: 'category',
+      foreignField: '_id',
+      as: 'category'
+    }
+  },
+  // Optional: Unwind if you expect only one category per product
+  {
+    $unwind: '$category'
+  },
+  { $sort: { createdAt: -1 } },
+  { $skip: skip },
+  { $limit: limit },
+]);
 
     return NextResponse.json({
       summary,
