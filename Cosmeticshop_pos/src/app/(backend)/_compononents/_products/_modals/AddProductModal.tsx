@@ -216,9 +216,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                             setValue={setValue}
                           />
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Controller
+                         <Controller
                             name="name"
                             control={control}
                             rules={{ required: 'Product name is required' }}
@@ -234,6 +232,8 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                               />
                             )}
                           />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         
                           
                           <Controller
                             name="sellingPrice"
@@ -253,7 +253,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                                 value={field.value}
                                 onValueChange={field.onChange}
                                 isRequired
-                                startContent="$"
+                                startContent="&#2547;"
                                 isInvalid={!!errors.sellingPrice}
                                 errorMessage={errors.sellingPrice?.message}
                               />
@@ -283,18 +283,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                             )}
                           />
                           
-                          <Controller
-                            name="sku"
-                            control={control}
-                            render={({ field }) => (
-                              <Input
-                                label="SKU"
-                                placeholder="Enter SKU (optional)"
-                                value={field.value}
-                                onValueChange={field.onChange}
-                              />
-                            )}
-                          />
+                          
                         </div>
                         
                         <Controller
@@ -369,7 +358,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                                 value={batch.unitCost.toString()}
                                 onValueChange={(value) => handleBatchChange(index, 'unitCost', parseFloat(value) || 0)}
                                 isRequired
-                                startContent="$"
+                                startContent="&#2547;"
                               />
                               
                               <Input

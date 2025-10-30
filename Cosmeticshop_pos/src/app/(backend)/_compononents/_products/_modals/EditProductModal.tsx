@@ -10,7 +10,7 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/modal";
-import { Input } from "@heroui/input";
+import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Divider } from "@heroui/divider";
@@ -305,8 +305,8 @@ export default function EditProductModal({
 
   // Fixed form submission handler
   const handleFormSubmit = () => {
-  handleSubmit(onSubmit)();
-};
+    handleSubmit(onSubmit)();
+  };
 
   return (
     <>
@@ -358,8 +358,7 @@ export default function EditProductModal({
                             defaultValue={product?.imageUrl}
                           />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          <Controller
+                         <Controller
                             name="name"
                             control={control}
                             rules={{ required: "Product name is required" }}
@@ -377,22 +376,10 @@ export default function EditProductModal({
                               />
                             )}
                           />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                         
 
-                          <Controller
-                            name="sku"
-                            control={control}
-                            render={({ field }) => (
-                              <Input
-                                label="SKU"
-                                placeholder="Enter SKU"
-                                readOnly
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                variant="bordered"
-                                size="md"
-                              />
-                            )}
-                          />
+                       
 
                           <Controller
                             name="sellingPrice"
@@ -415,7 +402,8 @@ export default function EditProductModal({
                                 startContent={
                                   <div className="pointer-events-none flex items-center">
                                     <span className="text-default-400 text-small">
-                                      $                                     </span>
+                                      &#2547;{" "}
+                                    </span>
                                   </div>
                                 }
                                 isInvalid={!!errors.sellingPrice}
@@ -462,7 +450,21 @@ export default function EditProductModal({
                               </Select>
                             )}
                           />
-
+   <Controller
+                            name="sku"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                label="SKU"
+                                placeholder="Enter SKU"
+                                readOnly
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                variant="bordered"
+                                size="md"
+                              />
+                            )}
+                          />
                           <Controller
                             name="barcode"
                             control={control}
@@ -484,13 +486,14 @@ export default function EditProductModal({
                           name="description"
                           control={control}
                           render={({ field }) => (
-                            <Input
+                            <Textarea
                               label="Description"
                               placeholder="Enter product description"
                               value={field.value}
                               onValueChange={field.onChange}
                               variant="bordered"
                               size="md"
+                              rows={2}
                             />
                           )}
                         />
@@ -608,7 +611,8 @@ export default function EditProductModal({
                                     startContent={
                                       <div className="pointer-events-none flex items-center">
                                         <span className="text-default-400 text-small">
-                                          $                                         </span>
+                                          &#2547;{" "}
+                                        </span>
                                       </div>
                                     }
                                     variant="bordered"

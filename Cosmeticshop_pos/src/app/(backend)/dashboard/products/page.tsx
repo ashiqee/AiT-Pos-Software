@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
 import {
   Table,
   TableHeader,
@@ -12,7 +13,7 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Badge, ScrollShadow } from "@heroui/react";
+import { Badge, ScrollShadow, Pagination } from "@heroui/react";
 import {
   Plus,
   Upload,
@@ -21,6 +22,8 @@ import {
   Trash2,
   Package,
   Barcode,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useProducts } from "@/app/hooks/useProducts";
 import AddProductModal from "../../_compononents/_products/_modals/AddProductModal";
@@ -30,8 +33,18 @@ import EditProductModal from "../../_compononents/_products/_modals/EditProductM
 import ViewProductDetailsModal from "../../_compononents/_products/_modals/ViewProductDetailsModal";
 import { useUser } from "@/app/hooks/useUser";
 
+// Helper function to calculate average unit cost from batches
+const calculateAvgUnitCost = (batches: any[]) => {
+  if (!batches || batches.length === 0) return 0;
+  
+  const totalCost = batches.reduce((sum, batch) => sum + (batch.unitCost * batch.quantity), 0);
+  const totalQuantity = batches.reduce((sum, batch) => sum + batch.quantity, 0);
+  
+  return totalQuantity > 0 ? totalCost / totalQuantity : 0;
+};
+
 export default function ProductsManagePage() {
-  const {role,loading}=useUser()
+  const {role, loading} = useUser();
   const {
     products,
     summary,
@@ -45,6 +58,8 @@ export default function ProductsManagePage() {
     stockFilter,
     setStockFilter,
     currentPage,
+    limit,
+    setLimit,
     goToPage,
     nextPage,
     prevPage,
@@ -55,29 +70,69 @@ export default function ProductsManagePage() {
   // Clear barcode search
   const clearBarcode = () => setBarcode(null);
 
- 
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    goToPage(page);
+  };
+
+  // Handle limit change
+  const handleLimitChange = (value: string) => {
+    const newLimit = parseInt(value);
+    setLimit(newLimit);
+  };
+
+  // Generate page numbers for pagination
+  const generatePageNumbers = () => {
+    if (!pagination) return [];
+    
+    const { currentPage, totalPages } = pagination;
+    const pages = [];
+    
+    // Always show first page
+    pages.push(1);
+    
+    // Show current page and nearby pages
+    if (currentPage > 2) {
+      if (currentPage > 3) pages.push("...");
+      pages.push(currentPage - 1);
+    }
+    
+    if (currentPage !== 1 && currentPage !== totalPages) {
+      pages.push(currentPage);
+    }
+    
+    if (currentPage < totalPages - 1) {
+      pages.push(currentPage + 1);
+      if (currentPage < totalPages - 2) pages.push("...");
+    }
+    
+    // Always show last page
+    if (totalPages > 1) pages.push(totalPages);
+    
+    return pages;
+  };
 
   return (
     <div>
       {/* Header Section */}
       <div className="flex w-full flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="w-full ">
+        <div className="w-full">
           <h1 className="text-xl lg:text-2xl font-bold">Product Management</h1>
           <p className="text-gray-600">Manage your product inventory</p>
         </div>
 
-        <div className="flex justify-end gap-3 w-full ">
+        <div className="flex justify-end gap-3 w-full">
           <Link href="/dashboard/products/import">
             <Button
               color="primary"
               variant="flat"
               startContent={<Upload size={16} />}
-              className="w-full "
+              className="w-full"
             >
               Bulk Import
             </Button>
           </Link>
-          <AddProductModal onProductAdded={refreshProducts}/>
+          <AddProductModal onProductAdded={refreshProducts} />
         </div>
       </div>
 
@@ -188,51 +243,68 @@ export default function ProductsManagePage() {
               )}
             </div>
 
-           <ScrollShadow className="w-72 md:w-full ">
-
-             <div className="flex gap-2">
-              <Button
-                variant="flat"
-                size="sm"
-                color={stockFilter === null ? "primary" : "default"}
-                onPress={() => setStockFilter(null)}
-              >
-                All
-              </Button>
-              <Button
-                variant="flat"
-                size="sm"
-                color={stockFilter === "high" ? "primary" : "default"}
-                onPress={() => setStockFilter("high")}
-              >
-                High Stock
-              </Button>
-              <Button
-                variant="flat"
-                size="sm"
-                color={stockFilter === "low" ? "primary" : "default"}
-                onPress={() => setStockFilter("low")}
-              >
-                Low Stock
-              </Button>
-              <Button
-                variant="flat"
-                size="sm"
-                color={stockFilter === "out" ? "primary" : "default"}
-                onPress={() => setStockFilter("out")}
-              >
-                Out of Stock
-              </Button>
-            </div>
-           </ScrollShadow>
+            <ScrollShadow className="w-72 md:w-full">
+              <div className="flex gap-2">
+                <Button
+                  variant="flat"
+                  size="sm"
+                  color={stockFilter === null ? "primary" : "default"}
+                  onPress={() => setStockFilter(null)}
+                >
+                  All
+                </Button>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  color={stockFilter === "high" ? "primary" : "default"}
+                  onPress={() => setStockFilter("high")}
+                >
+                  High Stock
+                </Button>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  color={stockFilter === "low" ? "primary" : "default"}
+                  onPress={() => setStockFilter("low")}
+                >
+                  Low Stock
+                </Button>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  color={stockFilter === "out" ? "primary" : "default"}
+                  onPress={() => setStockFilter("out")}
+                >
+                  Out of Stock
+                </Button>
+              </div>
+            </ScrollShadow>
           </div>
         </CardBody>
       </Card>
 
       {/* Products Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex justify-between items-center">
           <h2 className="text-lg font-semibold">All Products</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Show</span>
+            <Select
+              aria-label="Items per page"
+              size="sm"
+              className="w-20"
+              selectedKeys={[limit.toString()]}
+              onSelectionChange={(keys) => handleLimitChange(Array.from(keys)[0] as string)}
+            >
+              <SelectItem key="5" textValue="5">5</SelectItem>
+              <SelectItem key="10" textValue="10">10</SelectItem>
+              <SelectItem key="20" textValue="20">20</SelectItem>
+              <SelectItem key="50" textValue="50">50</SelectItem>
+              <SelectItem key="100" textValue="100">100</SelectItem>
+              <SelectItem key="500" textValue="500">500</SelectItem>
+            </Select>
+            <span className="text-sm text-gray-500">items per page</span>
+          </div>
         </CardHeader>
         <CardBody>
           {isLoading ? (
@@ -258,92 +330,130 @@ export default function ProductsManagePage() {
               </div>
             </div>
           ) : (
-            <Table aria-label="Products table">
-              <TableHeader>
-                <TableColumn>PRODUCT</TableColumn>
-                <TableColumn>PRICE</TableColumn>
-                <TableColumn>Total Sold</TableColumn>
-                <TableColumn>STOCK</TableColumn>
-                <TableColumn>STATUS</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product._id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-gray-200 rounded-lg w-12 h-12 flex items-center justify-center">
-                          {product.imageUrl ? (
-                            <Image
-                              src={product.imageUrl}
-                              alt={product.name}
-                              width={48}
-                              height={48}
-                              className="w-12 h-12 rounded-md object-cover"
-                            />
-                          ) : (
-                            <span className="text-gray-500 text-xs">IMG</span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.sku}
+            <>
+              <Table aria-label="Products table">
+                <TableHeader>
+                  <TableColumn>PRODUCT</TableColumn>
+                  <TableColumn>PRICE</TableColumn>
+                  <TableColumn>UNIT AVG COST</TableColumn>
+                  <TableColumn>Total Sold</TableColumn>
+                  <TableColumn>STOCK</TableColumn>
+                  <TableColumn>STATUS</TableColumn>
+                  <TableColumn>ACTIONS</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product._id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="bg-gray-200 rounded-lg w-12 h-12 flex items-center justify-center">
+                            {product.imageUrl ? (
+                              <Image
+                                src={product.imageUrl}
+                                alt={product.name}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 rounded-md object-cover"
+                              />
+                            ) : (
+                              <span className="text-gray-500 text-xs">IMG</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {product.sku}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>${product.sellingPrice.toFixed(2)}</TableCell>
-                    <TableCell>{product.totalSold}</TableCell>
-                    <TableCell>{product.availableStock}</TableCell>
-                    <TableCell>
-                    <StockChip stockLevel={product.stockLevel} />
+                      </TableCell>
+                      <TableCell>&#2547;{product.sellingPrice.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="font-medium">
+                            &#2547;{calculateAvgUnitCost(product.batches).toFixed(2)}
+                          </span>
+                          <div className="ml-2 text-xs text-gray-500">
+                            ({product.batches.length} batch{product.batches.length > 1 ? 'es' : ''})
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{product.totalSold}</TableCell>
+                      <TableCell>{product.availableStock}</TableCell>
+                      <TableCell>
+                        <StockChip stockLevel={product.stockLevel} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <ViewProductDetailsModal product={product} />
+                          {role === "admin" && (
+                            <>
+                              <EditProductModal product={product} onProductUpdated={refreshProducts} />
+                              <DeleteAlert id={product._id} onProductUpdated={refreshProducts} />
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <ViewProductDetailsModal product={product} />
-                       {
-                        role === "admin" && <>
-                        <EditProductModal product={product} onProductUpdated={refreshProducts}/>
-                      <DeleteAlert id={product._id} onProductUpdated={refreshProducts}/>
-                        </>
-                       }
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              {/* Enhanced Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="flex justify-between items-center mt-4">
+                  <div className="text-sm text-gray-500">
+                    Showing {((currentPage - 1) * limit) + 1} to {Math.min(currentPage * limit, pagination.totalCount)} of {pagination.totalCount} products
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      isDisabled={!pagination.hasPrev}
+                      variant="flat"
+                      size="sm"
+                      onPress={prevPage}
+                      startContent={<ChevronLeft size={16} />}
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {generatePageNumbers().map((page, index) => (
+                        <div key={index}>
+                          {page === "..." ? (
+                            <span className="px-2 py-1 text-sm">...</span>
+                          ) : (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant={currentPage === page ? "solid" : "flat"}
+                              color={currentPage === page ? "primary" : "default"}
+                              onPress={() => handlePageChange(page as number)}
+                              className="min-w-8"
+                            >
+                              {page}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <Button
+                      isDisabled={!pagination.hasNext}
+                      variant="flat"
+                      size="sm"
+                      onPress={nextPage}
+                      endContent={<ChevronRight size={16} />}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardBody>
       </Card>
-      {/* // Add pagination controls */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex justify-center mt-4">
-          <div className="flex items-center gap-2">
-            <Button
-              isDisabled={!pagination.hasPrev}
-              variant="flat"
-              size="sm"
-              onPress={prevPage}
-            >
-              Previous
-            </Button>
-            <span className="text-sm">
-              Page {currentPage} of {pagination.totalPages}
-            </span>
-            <Button
-              isDisabled={!pagination.hasNext}
-              variant="flat"
-              size="sm"
-              onPress={nextPage}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

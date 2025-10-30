@@ -14,7 +14,6 @@ interface Category {
   name: string;
 }
 
-
 interface Product {
   _id: string;
   name: string;
@@ -31,7 +30,7 @@ interface Product {
   imageUrl: string;
   inStock: boolean;
   stockLevel: "high" | "low" | "out";
-   createdAt: string;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -68,13 +67,15 @@ export function useProducts() {
   const [barcode, setBarcode] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10); // Default limit of 10
 
   // Fetch products with pagination and filters
   const fetchProducts = async (
     search = "",
     barcodeValue: string | null = null,
     stockFilterValue: string | null = null,
-    page = 1
+    page = 1,
+    limitValue = limit
   ) => {
     setIsLoading(true);
     setError(null);
@@ -89,7 +90,7 @@ export function useProducts() {
         query.append("stock", stockFilterValue);
       }
       query.append("page", page.toString());
-      query.append("limit", "10"); // Fixed limit of 10
+      query.append("limit", limitValue.toString());
 
       const response = await fetch(`/api/products/all-products?${query.toString()}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -118,22 +119,22 @@ export function useProducts() {
   useEffect(() => {
     if (!barcode) {
       const timeoutId = setTimeout(() => {
-        fetchProducts(searchTerm, null, stockFilter, 1);
+        fetchProducts(searchTerm, null, stockFilter, 1, limit);
       }, 300);
       return () => clearTimeout(timeoutId);
     }
-  }, [searchTerm, stockFilter, barcode]);
+  }, [searchTerm, stockFilter, barcode, limit]);
 
   // Refetch when barcode changes
   useEffect(() => {
     if (barcode) {
-      fetchProducts("", barcode, null, 1);
+      fetchProducts("", barcode, null, 1, limit);
     }
-  }, [barcode]);
+  }, [barcode, limit]);
 
   // Pagination functions
   const goToPage = (page: number) => {
-    fetchProducts(searchTerm, barcode, stockFilter, page);
+    fetchProducts(searchTerm, barcode, stockFilter, page, limit);
   };
 
   const nextPage = () => {
@@ -148,16 +149,23 @@ export function useProducts() {
     }
   };
 
+  // Function to change the limit and reset to page 1
+  const changeLimit = (newLimit: number) => {
+    setLimit(newLimit);
+    // Reset to page 1 when changing limit
+    fetchProducts(searchTerm, barcode, stockFilter, 1, newLimit);
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm("");
     setBarcode(null);
     setStockFilter(null);
-    goToPage(1);
+    fetchProducts("", null, null, 1, limit);
   };
 
   // Helpers
-  const refreshProducts = () => fetchProducts(searchTerm, barcode, stockFilter, currentPage);
+  const refreshProducts = () => fetchProducts(searchTerm, barcode, stockFilter, currentPage, limit);
   const addProduct = (newProduct: Product) => {
     setProducts(prev => [newProduct, ...prev]);
     // Update summary if needed
@@ -227,6 +235,8 @@ export function useProducts() {
     stockFilter,
     setStockFilter,
     currentPage,
+    limit,
+    setLimit: changeLimit, // Renamed to changeLimit for clarity
     goToPage,
     nextPage,
     prevPage,
