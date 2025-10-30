@@ -35,18 +35,9 @@ export async function GET(request: NextRequest) {
       // .limit(barcode || search ? 0 : 20) // Limit only when no search or barcode
       .exec();
 
-    const productsWithStock = products.map((product) => ({
-      ...product.toObject(),
-      inStock: product.totalQuantity > 0,
-      stockLevel:
-        product.totalQuantity > 10
-          ? 'high'
-          : product.totalQuantity > 0
-          ? 'low'
-          : 'out',
-    }));
+    
 
-    return NextResponse.json(productsWithStock);
+    return NextResponse.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(

@@ -40,12 +40,13 @@ import { addToast, NumberInput, ScrollShadow } from "@heroui/react";
 import { ThemeSwitch } from "@/components/theme-switch";
 
 interface CartProduct {
-  _id: string;
+  warehouseStock: number;
+   _id: string;
   name: string;
   imageUrl: string;
   barcode: string;
   sellingPrice: number;
-  availableStock: number;
+  shopStock: number;
   inStock: boolean;
   stockLevel: string;
   category: { name: string };
@@ -110,8 +111,8 @@ export default function POSPage() {
     },
     0
   );
-  const tax = subtotal * 0.08;
-  const total = Math.round(subtotal + tax - discount).toFixed(2);
+  
+  const total = Math.round(subtotal - discount).toFixed(2);
 
   useEffect(() => {
     fetchProducts(); // initial load
@@ -134,7 +135,7 @@ export default function POSPage() {
 
   // Open price modal when product is clicked
   const handleProductClick = (product: CartProduct) => {
-    if (product.availableStock > 0) {
+    if (product.shopStock > 0) {
       setSelectedProduct(product);
       setCustomPrice(product.sellingPrice.toString());
       onPriceModalOpen();
@@ -253,7 +254,6 @@ export default function POSPage() {
         }),
         subtotal,
         discount,
-        tax,
         total: totalNum,
         paymentMethod,
         amountPaid: amountPaidNum,
@@ -338,9 +338,9 @@ export default function POSPage() {
                   {products?.map((product) => (
                     <Card
                       key={product._id}
-                      isPressable={product?.availableStock > 0}
+                      isPressable={product?.shopStock > 0}
                       className={`cursor-pointer hover:shadow-md transition-shadow ${
-                        product?.availableStock < 1
+                        product?.shopStock < 1
                           ? "opacity-50 cursor-not-allowed"
                           : ""
                       }`}
@@ -375,11 +375,16 @@ export default function POSPage() {
                         </p>
                         <div className="md:flex-row flex flex-col gap-1 items-center justify-between w-full">
                           <p
-                            className={`mt-2 text-[10px] p-1 px-2 font-light rounded-md ${product?.availableStock < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
+                            className={`mt-2 text-[10px] text-white p-1 px-2 font-light rounded-md ${product?.shopStock < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
                           >
-                            {product?.availableStock} in stock
+                            {product?.shopStock} in shop 
                           </p>
-                          <p className="text-[10px] bg-amber-50/5 p-1 px-2 rounded-md">
+                          <p
+                            className={`mt-1 text-[10px] text-white p-1 px-2 font-light rounded-md ${product?.warehouseStock < 1 ? "bg-red-700/75 " : "bg-green-700 "}`}
+                          >
+                            {product?.warehouseStock} in warehouse 
+                          </p>
+                          <p className="text-[12px] font-semibold bg-amber-50/5 p-1 px-2 rounded-md">
                             SKU-{product.sku}
                           </p>
                         </div>
@@ -503,7 +508,7 @@ export default function POSPage() {
                                       variant="light"
                                       isDisabled={
                                         item.quantity >=
-                                        item.product.availableStock
+                                        item.product.shopStock
                                       }
                                       onPress={() =>
                                         updateQuantity(
@@ -569,10 +574,10 @@ export default function POSPage() {
             <span>&#x09F3;{subtotal.toFixed(2)}</span>
           </div>
 
-          <div className="flex justify-between">
+          {/* <div className="flex justify-between">
             <span>Tax (8%):</span>
             <span>&#x09F3;{tax.toFixed(2)}</span>
-          </div>
+          </div> */}
 
           {/* Discount */}
           <div className="flex justify-between items-center">
@@ -582,7 +587,7 @@ export default function POSPage() {
               <input
                 type="number"
                 min="0"
-                max={subtotal + tax}
+                max={subtotal}
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                 className="w-24 px-2 py-1 border rounded dark:bg-white/5 dark:text-white text-right text-xs"
@@ -594,7 +599,7 @@ export default function POSPage() {
           <div className="flex justify-between font-bold text-lg">
             <span>Total:</span>
             <span>
-              &#x09F3;{Math.round(subtotal + tax - discount).toFixed(2)}
+              &#x09F3;{Math.round(subtotal - discount).toFixed(2)}
             </span>
           </div>
           {/* Payment Method Selection */}
@@ -854,10 +859,10 @@ export default function POSPage() {
                         <span>Subtotal:</span>
                         <span>৳{receiptData.subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span>Tax (8%):</span>
                         <span>৳{receiptData.tax.toFixed(2)}</span>
-                      </div>
+                      </div> */}
                       {receiptData.discount > 0 && (
                         <div className="flex justify-between text-red-600">
                           <span>Discount:</span>

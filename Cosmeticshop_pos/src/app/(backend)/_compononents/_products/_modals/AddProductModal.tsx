@@ -7,7 +7,7 @@ import { Input, Textarea } from '@heroui/input';
 import { Select, SelectItem } from '@heroui/select';
 import { Card, CardHeader, CardBody } from '@heroui/card';
 import { Divider } from '@heroui/divider';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageUploader from '../_uploader/ImageUploader';
 import { useForm, Controller } from 'react-hook-form';
@@ -42,7 +42,9 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
       sellingPrice: '',
       category: '',
       sku: '',
-      imageUrl: ''
+      barcode: '',
+      imageUrl: '',
+      stockLocation: 'warehouse' // Default to warehouse for initial stock
     }
   });
   
@@ -114,16 +116,28 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
     setIsLoading(true);
     
     try {
+      // Calculate total quantity from batches
+      const totalQuantity = batches.reduce((sum, batch) => sum + batch.quantity, 0);
+      
       // Prepare data for API
       const payload = {
-        ...data,
+        name: data.name,
+        description: data.description || '',
         sellingPrice: parseFloat(data.sellingPrice),
+        category: data.category,
+        sku: data.sku || undefined, // Let backend auto-generate if empty
+        barcode: data.barcode || undefined,
+        imageUrl: data.imageUrl || undefined,
         batches: batches.map(batch => ({
-          ...batch,
+          purchaseDate: new Date(batch.purchaseDate),
           quantity: parseInt(batch.quantity as any),
           unitCost: parseFloat(batch.unitCost as any),
-          purchaseDate: new Date(batch.purchaseDate)
-        }))
+          supplier: batch.supplier || undefined,
+          batchNumber: batch.batchNumber || `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        })),
+        // Set initial stock based on selected location
+        warehouseStock: data.stockLocation === 'warehouse' ? totalQuantity : 0,
+        shopStock: data.stockLocation === 'shop' ? totalQuantity : 0
       };
       
       const response = await fetch('/api/products', {
@@ -147,7 +161,9 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
         sellingPrice: '',
         category: '',
         sku: '',
-        imageUrl: ''
+        barcode: '',
+        imageUrl: '',
+        stockLocation: 'warehouse'
       });
       
       setBatches([{
@@ -189,14 +205,17 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
       <Modal 
         isOpen={isOpen} 
         onClose={onClose} 
-        size="3xl"
+        size="4xl"
         scrollBehavior="inside"
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                Add New Product
+                <div className="flex items-center gap-2">
+                  <Package size={20} />
+                  Add New Product
+                </div>
               </ModalHeader>
               <ModalBody>
                 <form onSubmit={(e) => e.preventDefault()}>
@@ -216,7 +235,9 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                             setValue={setValue}
                           />
                         </div>
-                         <Controller
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Controller
                             name="name"
                             control={control}
                             rules={{ required: 'Product name is required' }}
@@ -229,33 +250,6 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                                 isRequired
                                 isInvalid={!!errors.name}
                                 errorMessage={errors.name?.message}
-                              />
-                            )}
-                          />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         
-                          
-                          <Controller
-                            name="sellingPrice"
-                            control={control}
-                            rules={{ 
-                              required: 'Selling price is required',
-                              pattern: {
-                                value: /^[0-9]*\.?[0-9]+$/,
-                                message: 'Please enter a valid price'
-                              }
-                            }}
-                            render={({ field }) => (
-                              <Input
-                                type="number"
-                                label="Selling Price"
-                                placeholder="0.00"
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                isRequired
-                                startContent="&#2547;"
-                                isInvalid={!!errors.sellingPrice}
-                                errorMessage={errors.sellingPrice?.message}
                               />
                             )}
                           />
@@ -283,7 +277,81 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                             )}
                           />
                           
+                          <Controller
+                            name="sellingPrice"
+                            control={control}
+                            rules={{ 
+                              required: 'Selling price is required',
+                              pattern: {
+                                value: /^[0-9]*\.?[0-9]+$/,
+                                message: 'Please enter a valid price'
+                              }
+                            }}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                label="Selling Price"
+                                placeholder="0.00"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                isRequired
+                                startContent={
+                                  <div className="pointer-events-none flex items-center">
+                                    <span className="text-default-400 text-small">৳</span>
+                                  </div>
+                                }
+                                isInvalid={!!errors.sellingPrice}
+                                errorMessage={errors.sellingPrice?.message}
+                              />
+                            )}
+                          />
                           
+                          <Controller
+                            name="stockLocation"
+                            control={control}
+                            render={({ field }) => (
+                              <Select
+                                label="Initial Stock Location"
+                                placeholder="Select location"
+                                selectedKeys={[field.value]}
+                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
+                              >
+                                <SelectItem key="warehouse" textValue="Warehouse">
+                                  Warehouse
+                                </SelectItem>
+                                <SelectItem key="shop" textValue="Shop">
+                                  Shop
+                                </SelectItem>
+                              </Select>
+                            )}
+                          />
+                          
+                          <Controller
+                            name="sku"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                label="SKU (Optional)"
+                                placeholder="Leave empty to auto-generate"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                description="If left empty, SKU will be auto-generated"
+                              />
+                            )}
+                          />
+                          
+                          <Controller
+                            name="barcode"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                label="Barcode (Optional)"
+                                placeholder="Enter barcode"
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              />
+                            )}
+                          />
                         </div>
                         
                         <Controller
@@ -291,7 +359,6 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                           control={control}
                           render={({ field }) => (
                             <Textarea
-                              rows={3}
                               label="Description"
                               placeholder="Enter product description"
                               value={field.value}
@@ -305,7 +372,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                     {/* Batches */}
                     <Card>
                       <CardHeader className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">Inventory Batches</h3>
+                        <div>
+                          <h3 className="text-lg font-semibold">Inventory Batches</h3>
+                          <p className="text-sm text-default-500">
+                            Add initial inventory batches. Total quantity will be added to selected stock location.
+                          </p>
+                        </div>
                         <Button 
                           size="sm" 
                           color="primary" 
@@ -318,9 +390,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                       </CardHeader>
                       <CardBody className="space-y-4">
                         {batches.map((batch, index) => (
-                          <div key={index} className="border rounded-lg p-4">
+                          <div key={index} className="border rounded-lg p-4 bg-default-50">
                             <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-medium">Batch #{index + 1}</h4>
+                              <h4 className="font-medium flex items-center gap-2">
+                                <Package size={16} />
+                                Batch #{index + 1}
+                              </h4>
                               {batches.length > 1 && (
                                 <Button 
                                   isIconOnly 
@@ -334,7 +409,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                               )}
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <Input
                                 type="date"
                                 label="Purchase Date"
@@ -349,6 +424,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                                 value={batch.quantity.toString()}
                                 onValueChange={(value) => handleBatchChange(index, 'quantity', parseInt(value) || 0)}
                                 isRequired
+                                min="1"
                               />
                               
                               <Input
@@ -358,7 +434,12 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                                 value={batch.unitCost.toString()}
                                 onValueChange={(value) => handleBatchChange(index, 'unitCost', parseFloat(value) || 0)}
                                 isRequired
-                                startContent="&#2547;"
+                                min="0"
+                                startContent={
+                                  <div className="pointer-events-none flex items-center">
+                                    <span className="text-default-400 text-small">৳</span>
+                                  </div>
+                                }
                               />
                               
                               <Input
@@ -370,13 +451,22 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
                               
                               <Input
                                 label="Batch Number"
-                                placeholder="Enter batch number"
+                                placeholder="Auto-generated if empty"
                                 value={batch.batchNumber}
                                 onValueChange={(value) => handleBatchChange(index, 'batchNumber', value)}
+                                description="Leave empty for auto-generation"
                               />
                             </div>
                           </div>
                         ))}
+                        
+                        {batches.length > 0 && (
+                          <div className="mt-4 p-3 bg-primary-50 rounded-lg">
+                            <p className="text-sm font-medium text-primary-700">
+                              Total Quantity: {batches.reduce((sum, batch) => sum + batch.quantity, 0)} units
+                            </p>
+                          </div>
+                        )}
                       </CardBody>
                     </Card>
                   </div>
@@ -384,7 +474,7 @@ export default function AddProductModal({ onProductAdded }: AddProductModalProps
               </ModalBody>
               <ModalFooter>
                 <Button 
-                  color="primary" 
+                  color="default" 
                   variant="light" 
                   onPress={onClose}
                 >

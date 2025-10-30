@@ -46,10 +46,9 @@ export interface IProduct extends Document {
   description?: string;
   sellingPrice: number;
   batches: IBatch[];
-  totalQuantity: number;
   totalSold: number;
-  warehouseStock: number; // Added to track warehouse stock directly
-  shopStock: number; // Added to track shop stock directly
+  warehouseStock: number; // Track warehouse stock directly
+  shopStock: number; // Track shop stock directly
   category: mongoose.Types.ObjectId;
   sku?: string;
   barcode?: string;
@@ -71,7 +70,7 @@ export interface IProduct extends Document {
     stockLevel: string;
   }>;
   getAverageUnitCost(): Promise<number>;
-  recalculateStock(): Promise<void>; // Added to recalculate stock from transactions
+  recalculateStock(): Promise<void>;
 }
 
 // Batch Schema
@@ -112,10 +111,9 @@ const productSchema = new Schema<IProduct>({
   description: { type: String },
   sellingPrice: { type: Number, required: true },
   batches: [batchSchema],
-  totalQuantity: { type: Number, default: 0 },
   totalSold: { type: Number, default: 0 },
-  warehouseStock: { type: Number, default: 0 }, // Added to track warehouse stock
-  shopStock: { type: Number, default: 0 }, // Added to track shop stock
+  warehouseStock: { type: Number, default: 0 }, // Track warehouse stock
+  shopStock: { type: Number, default: 0 }, // Track shop stock
   category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
   sku: { type: String, unique: true },
   barcode: { type: String },
@@ -128,21 +126,27 @@ const productSchema = new Schema<IProduct>({
   toObject: { virtuals: true }
 });
 
-// Virtual for availableStock
-productSchema.virtual('availableStock').get(function() {
-  return this.shopStock;
+// Virtual for totalQuantity - calculated as sum of warehouse and shop stock
+productSchema.virtual('totalQuantity').get(function() {
+  return this.warehouseStock + this.shopStock;
 });
 
-// Virtual for stockLevel
+// Virtual for availableStock - sum of warehouse and shop stock
+productSchema.virtual('availableStock').get(function() {
+  return this.warehouseStock + this.shopStock;
+});
+
+// Virtual for stockLevel - based on total stock
 productSchema.virtual('stockLevel').get(function() {
-  if (this.shopStock === 0) return 'out';
-  if (this.shopStock <= 5) return 'low';
+  const totalStock = this.warehouseStock + this.shopStock;
+  if (totalStock === 0) return 'out';
+  if (totalStock <= 5) return 'low';
   return 'high';
 });
 
-// Virtual for inStock
+// Virtual for inStock - based on total stock
 productSchema.virtual('inStock').get(function() {
-  return this.shopStock > 0;
+  return (this.warehouseStock + this.shopStock) > 0;
 });
 
 // Method to get stock by location
@@ -180,7 +184,7 @@ productSchema.methods.getStockByLocation = async function(location: LocationType
           $sum: { 
             $cond: [
               { $eq: ['$fromLocation', location] },
-              { $multiply: ['$quantity', -1] }, // Fixed: use multiplication instead of abs
+              { $multiply: ['$quantity', -1] },
               0
             ]
           }
@@ -203,8 +207,8 @@ productSchema.methods.getStockInfo = async function() {
     warehouseStock,
     shopStock,
     totalStock,
-    inStock: shopStock > 0,
-    stockLevel: shopStock === 0 ? 'out' : (shopStock <= 5 ? 'low' : 'high')
+    inStock: totalStock > 0,
+    stockLevel: totalStock === 0 ? 'out' : (totalStock <= 5 ? 'low' : 'high')
   };
 };
 
@@ -252,7 +256,6 @@ productSchema.methods.recordPurchase = async function(
   
   // Add batch to product
   this.batches.push(newBatch);
-  this.totalQuantity += quantity;
   
   // Update location-specific stock
   if (location === 'warehouse') {
@@ -319,7 +322,7 @@ productSchema.methods.recordTransfer = async function(
   return this.save({ session });
 };
 
-// Method to record a sale
+// Method to record a sale - FIXED to only affect shop stock
 productSchema.methods.recordSale = async function(
   quantity: number, 
   session?: any, 
@@ -332,9 +335,8 @@ productSchema.methods.recordSale = async function(
     throw new Error(`Insufficient shop stock for ${this.name}. Shop: ${this.shopStock}, Requested: ${quantity}`);
   }
   
-  // Update stock
+  // Update only shop stock and total sold
   this.shopStock -= quantity;
-  this.totalQuantity -= quantity;
   this.totalSold += quantity;
   
   // Create sale transaction
@@ -367,9 +369,6 @@ productSchema.methods.recordAdjustment = async function(
   } else if (location === 'shop') {
     this.shopStock += quantity;
   }
-  
-  // Update total quantity
-  this.totalQuantity += quantity;
 
   const adjustmentTransaction = new InventoryTransaction({
     product: this._id,
@@ -463,7 +462,6 @@ productSchema.methods.recalculateStock = async function(): Promise<void> {
   // Update stock values
   this.warehouseStock = (warehouseResult[0]?.totalIn || 0) + (warehouseResult[0]?.totalOut || 0);
   this.shopStock = (shopResult[0]?.totalIn || 0) + (shopResult[0]?.totalOut || 0);
-  this.totalQuantity = this.warehouseStock + this.shopStock;
   
   await this.save();
 };
@@ -471,9 +469,6 @@ productSchema.methods.recalculateStock = async function(): Promise<void> {
 // Pre-save middleware
 productSchema.pre('save', async function(next) {
   this.updatedAt = new Date();
-  
-  // Calculate total quantity from location stocks
-  this.totalQuantity = this.warehouseStock + this.shopStock;
   
   // Auto-generate SKU only for new products
   if (this.isNew && !this.sku) {

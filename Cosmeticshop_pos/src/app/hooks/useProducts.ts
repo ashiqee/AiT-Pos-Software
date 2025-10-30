@@ -15,6 +15,8 @@ interface Category {
 }
 
 interface Product {
+  shopStock: number;
+  warehouseStock: number;
   _id: string;
   name: string;
   description: string;

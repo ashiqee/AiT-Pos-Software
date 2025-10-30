@@ -336,8 +336,9 @@ export default function ProductsManagePage() {
                   <TableColumn>PRODUCT</TableColumn>
                   <TableColumn>PRICE</TableColumn>
                   <TableColumn>UNIT AVG COST</TableColumn>
-                  <TableColumn>Total Sold</TableColumn>
                   <TableColumn>STOCK</TableColumn>
+                  <TableColumn>Total Sold</TableColumn>
+                  <TableColumn>Total Purchase</TableColumn>
                   <TableColumn>STATUS</TableColumn>
                   <TableColumn>ACTIONS</TableColumn>
                 </TableHeader>
@@ -378,8 +379,20 @@ export default function ProductsManagePage() {
                           </div>
                         </div>
                       </TableCell>
+                      
+                      <TableCell>
+                        
+                       <div className="flex flex-col gap-1">
+                         Warehouse: {product.warehouseStock}
+                        SHOP: {product.shopStock}
+                       </div>
+
+
+                      </TableCell>
                       <TableCell>{product.totalSold}</TableCell>
-                      <TableCell>{product.availableStock}</TableCell>
+         <TableCell>
+  {product.batches?.reduce((total, batch) => total + (batch.quantity || 0), 0) ?? 0}
+</TableCell>
                       <TableCell>
                         <StockChip stockLevel={product.stockLevel} />
                       </TableCell>

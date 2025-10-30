@@ -1,6 +1,7 @@
-// app/api/inventory/update-batch/route.ts
+// app/api/inventory/set-initial-warehouse-stock/route.ts
 import { dbConnect } from "@/lib/db/dbConnect";
-import Product, { IProduct } from "@/models/product";
+import Product, { InventoryTransaction, IProduct } from "@/models/product";
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/authOptions";
@@ -27,97 +28,71 @@ export async function POST(req: NextRequest) {
 
     for (const update of updates) {
       try {
-        const { sku, productId, operation, quantity, fromLocation, toLocation, notes, reason } = update;
+        const { _id, warehouseStock } = update;
 
-        // Find product by SKU or ID
-        const product = await Product.findOne(
-          sku ? { sku } : { _id: productId }
-        );
-        
-        if (!product) {
+        if (!_id) {
           errors.push({
             row: 0,
-            message: `Product not found: ${sku || productId}`,
+            message: "Missing _id field",
             data: update,
           });
           continue;
         }
 
-        try {
-          switch (operation) {
-            case 'transfer':
-              if (!fromLocation || !toLocation) {
-                throw new Error("Transfer operation requires fromLocation and toLocation");
-              }
-              await product.recordTransfer(quantity, fromLocation, toLocation);
-              break;
-              
-            case 'sale':
-              await product.recordSale(quantity, undefined);
-              break;
-              
-            case 'purchase':
-              if (!toLocation) {
-                throw new Error("Purchase operation requires toLocation");
-              }
-              // For purchases, we need unitCost - if not provided, use average cost
-              const unitCost = update.unitCost || await product.getAverageUnitCost();
-              await product.recordPurchase(quantity, unitCost, toLocation);
-              break;
-              
-            case 'adjustment':
-              if (!toLocation) {
-                throw new Error("Adjustment operation requires toLocation");
-              }
-              await product.recordAdjustment(quantity, toLocation, reason || notes);
-              break;
-              
-            case 'setStock':
-              // Direct stock setting for a specific location
-              if (!fromLocation) {
-                throw new Error("setStock operation requires fromLocation");
-              }
-              
-              const currentStock = fromLocation === 'warehouse' ? product.warehouseStock : product.shopStock;
-              const newStock = quantity;
-              const stockDiff = newStock - currentStock;
-              
-              // Update the stock for the specified location
-              if (fromLocation === 'warehouse') {
-                product.warehouseStock = newStock;
-              } else if (fromLocation === 'shop') {
-                product.shopStock = newStock;
-              }
-              
-              // Create adjustment transaction for the difference
-              if (stockDiff !== 0) {
-                await product.recordAdjustment(
-                  stockDiff,
-                  fromLocation,
-                  reason || notes || `Set stock to ${newStock}`
-                );
-              }
-              
-              // Save the product with updated stock
-              await product.save();
-              break;
-              
-            default:
-              throw new Error(`Unknown inventory operation type: ${operation}`);
-          }
-          
-          successCount++;
-        } catch (error: any) {
+        if (warehouseStock === undefined || warehouseStock === null) {
           errors.push({
             row: 0,
-            message: `Inventory operation failed: ${error.message}`,
+            message: "Missing warehouseStock field",
             data: update,
           });
+          continue;
         }
+
+        // Find product by ID
+        const product = await Product.findById(_id);
+        
+        if (!product) {
+          errors.push({
+            row: 0,
+            message: `Product with _id ${_id} not found`,
+            data: update,
+          });
+          continue;
+        }
+
+        // Check if product already has warehouse stock
+        if (product.warehouseStock > 0) {
+          errors.push({
+            row: 0,
+            message: `Product ${product.name} already has warehouse stock (${product.warehouseStock})`,
+            data: update,
+          });
+          continue;
+        }
+
+        // Set the initial warehouse stock
+        product.warehouseStock = parseInt(warehouseStock);
+        
+        // Create an initial setup transaction for audit trail
+        const setupTransaction = new InventoryTransaction({
+          product: product._id,
+          type: 'adjustment',
+          quantity: parseInt(warehouseStock),
+          toLocation: 'warehouse',
+          notes: 'Initial warehouse stock setup',
+          reference: `initial-setup-${Date.now()}`,
+          user: userId
+        });
+
+        // Save both records
+        await setupTransaction.save();
+        await product.save();
+
+        successCount++;
       } catch (error: any) {
         errors.push({
           row: 0,
-          message: error.message,
+          message: `Update failed: ${error.message}`,
           data: update,
         });
       }
@@ -128,7 +103,7 @@ export async function POST(req: NextRequest) {
       errors,
     });
   } catch (error: any) {
-    console.error("Batch inventory update error:", error);
-    return NextResponse.json({ error: "Failed to update inventory" }, { status: 500 });
+    console.error("Initial warehouse stock setup error:", error);
+    return NextResponse.json({ error: "Failed to set initial warehouse stock" }, { status: 500 });
   }
 }

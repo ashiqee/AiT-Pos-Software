@@ -83,8 +83,7 @@ export async function PATCH(request: NextRequest, context:Params) {
         purchaseDate: batch.purchaseDate ? new Date(batch.purchaseDate) : new Date()
       }));
       
-      // Recalculate total quantity
-      product.totalQuantity = product.batches.reduce((sum, batch) => sum + batch.quantity, 0);
+    
     }
     
     // Save the updated product
