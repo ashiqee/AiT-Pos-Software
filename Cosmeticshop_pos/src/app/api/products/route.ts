@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     const products = await Product.find(query)
       .sort({ createdAt: -1 }) // Latest first (descending by createdAt)
-      .limit(barcode || search ? 0 : 20) // Limit only when no search or barcode
+      // .limit(barcode || search ? 0 : 20) // Limit only when no search or barcode
       .exec();
 
     const productsWithStock = products.map((product) => ({

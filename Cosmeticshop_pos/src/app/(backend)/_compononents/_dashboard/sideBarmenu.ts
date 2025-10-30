@@ -8,6 +8,9 @@ import {
   Settings,
   FileUp,
   SatelliteDish,
+  ArrowRightLeft,
+  Warehouse,
+  Store,
 } from "lucide-react";
 
 export const roleBasedSidebarMenu: Record<
@@ -25,6 +28,18 @@ export const roleBasedSidebarMenu: Record<
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         // { label: "Reports", href: "/dashboard/report", icon: BarChart3 },
         // { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "Inventory",
+      collapsible: true,
+      items: [
+        // { label: "Inventory", href: "/dashboard/Inventory", icon: Package },
+        { label: "Stock Transfers", href: "/dashboard/inventory/transfers", icon: ArrowRightLeft },
+      { label: "Stock Adjustments", href: "/dashboard/inventory/adjustments", icon: Settings },
+      { label: "Warehouse Stock", href: "/dashboard/inventory/warehouse", icon: Warehouse },
+      { label: "Shop Stock", href: "/dashboard/inventory/shop", icon: Store },
+       
       ],
     },
     {

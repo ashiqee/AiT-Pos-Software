@@ -81,14 +81,18 @@ export function useProducts() {
     setError(null);
     try {
       const query = new URLSearchParams();
+      
+      // Handle barcode search (highest priority)
       if (barcodeValue) {
         query.append("barcode", barcodeValue);
       } else if (search) {
         query.append("search", search);
       }
+      
       if (stockFilterValue) {
         query.append("stock", stockFilterValue);
       }
+      
       query.append("page", page.toString());
       query.append("limit", limitValue.toString());
 
@@ -164,6 +168,60 @@ export function useProducts() {
     fetchProducts("", null, null, 1, limit);
   };
 
+  // Search by product name, SKU, or barcode
+  const searchProducts = (query: string) => {
+    setSearchTerm(query);
+    setBarcode(null); // Clear barcode when using text search
+  };
+
+  // Search by barcode specifically
+  const searchByBarcode = (barcodeValue: string) => {
+    setBarcode(barcodeValue);
+    setSearchTerm(""); // Clear text search when using barcode
+  };
+
+  // Enhanced search function that searches across multiple fields
+  const performSearch = (query: string) => {
+    // If the query looks like a barcode (numeric), use barcode search
+    if (/^\d+$/.test(query.trim())) {
+      searchByBarcode(query.trim());
+    } else {
+      searchProducts(query.trim());
+    }
+  };
+
+  // Filter products by search term
+  const getFilteredProducts = () => {
+    if (!searchTerm && !barcode) return products;
+    
+    return products.filter(product => {
+      const searchLower = searchTerm ? searchTerm.toLowerCase() : '';
+      const barcodeLower = barcode ? barcode.toLowerCase() : '';
+      
+      // Search by name
+      const nameMatch = product.name.toLowerCase().includes(searchLower);
+      
+      // Search by SKU
+      const skuMatch = product.sku.toLowerCase().includes(searchLower);
+      
+      // Search by barcode
+      const barcodeMatch = product.barcode && product.barcode.toLowerCase().includes(barcodeLower);
+      
+      // Search by description
+      const descriptionMatch = product.description && 
+        product.description.toLowerCase().includes(searchLower);
+      
+      return nameMatch || skuMatch || barcodeMatch || descriptionMatch;
+    });
+  };
+
+  // Get product by SKU or barcode
+  const getProductBySkuOrBarcode = (identifier: string) => {
+    return products.find(product => 
+      product.sku === identifier || product.barcode === identifier
+    );
+  };
+
   // Helpers
   const refreshProducts = () => fetchProducts(searchTerm, barcode, stockFilter, currentPage, limit);
   const addProduct = (newProduct: Product) => {
@@ -236,7 +294,7 @@ export function useProducts() {
     setStockFilter,
     currentPage,
     limit,
-    setLimit: changeLimit, // Renamed to changeLimit for clarity
+    setLimit: changeLimit,
     goToPage,
     nextPage,
     prevPage,
@@ -246,5 +304,10 @@ export function useProducts() {
     addProduct,
     updateProduct,
     removeProduct,
+    getFilteredProducts,
+    searchProducts,
+    searchByBarcode,
+    performSearch,
+    getProductBySkuOrBarcode,
   };
 }

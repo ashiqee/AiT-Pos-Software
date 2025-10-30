@@ -1,6 +1,22 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-// Define interfaces for TypeScript
+// Location Enum
+const LOCATION_ENUM = {
+  WAREHOUSE: 'warehouse',
+  SHOP: 'shop',
+} as const;
+type LocationType = typeof LOCATION_ENUM[keyof typeof LOCATION_ENUM];
+
+// Transaction Type Enum
+const TRANSACTION_TYPE_ENUM = {
+  PURCHASE: 'purchase',
+  TRANSFER: 'transfer',
+  SALE: 'sale',
+  ADJUSTMENT: 'adjustment',
+} as const;
+type TransactionType = typeof TRANSACTION_TYPE_ENUM[keyof typeof TRANSACTION_TYPE_ENUM];
+
+// Batch Interface
 interface IBatch {
   purchaseDate: Date;
   quantity: number;
@@ -9,6 +25,22 @@ interface IBatch {
   batchNumber?: string;
 }
 
+// Inventory Transaction Interface
+interface IInventoryTransaction extends Document {
+  product: mongoose.Types.ObjectId;
+  type: TransactionType;
+  quantity: number;
+  unitCost?: number;
+  fromLocation?: LocationType;
+  toLocation?: LocationType;
+  batchNumber?: string;
+  reference?: string;
+  notes?: string;
+  createdAt: Date;
+  user?: mongoose.Types.ObjectId;
+}
+
+// Product Interface
 export interface IProduct extends Document {
   name: string;
   description?: string;
@@ -16,6 +48,8 @@ export interface IProduct extends Document {
   batches: IBatch[];
   totalQuantity: number;
   totalSold: number;
+  warehouseStock: number; // Added to track warehouse stock directly
+  shopStock: number; // Added to track shop stock directly
   category: mongoose.Types.ObjectId;
   sku?: string;
   barcode?: string;
@@ -23,23 +57,24 @@ export interface IProduct extends Document {
   createdAt: Date;
   updatedAt: Date;
   
-  // Virtual fields will be added here
-  availableStock?: number;
-  inStock?: boolean;
-  stockLevel?: string;
-  
   // Methods
-  recordSale(quantity: number, session?: any): Promise<IProduct>;
-  getAvailableStock(): number;
-  getStockInfo(): {
-    totalQuantity: number;
-    totalSold: number;
-    availableStock: number;
+  recordSale(quantity: number, session?: any, userId?: mongoose.Types.ObjectId): Promise<IProduct>;
+  recordPurchase(quantity: number, unitCost: number, location: LocationType, batchNumber?: string, session?: any): Promise<IProduct>;
+  recordTransfer(quantity: number, fromLocation: LocationType, toLocation: LocationType, session?: any): Promise<IProduct>;
+  recordAdjustment(quantity: number, location: LocationType, reason?: string, session?: any): Promise<IProduct>;
+  getStockByLocation(location: LocationType): Promise<number>;
+  getStockInfo(): Promise<{
+    warehouseStock: number;
+    shopStock: number;
+    totalStock: number;
     inStock: boolean;
     stockLevel: string;
-  };
+  }>;
+  getAverageUnitCost(): Promise<number>;
+  recalculateStock(): Promise<void>; // Added to recalculate stock from transactions
 }
 
+// Batch Schema
 const batchSchema = new Schema<IBatch>({
   purchaseDate: { type: Date, default: Date.now },
   quantity: { type: Number, required: true },
@@ -48,6 +83,30 @@ const batchSchema = new Schema<IBatch>({
   batchNumber: { type: String }
 });
 
+// Inventory Transaction Schema
+const inventoryTransactionSchema = new Schema<IInventoryTransaction>({
+  product: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+  type: { 
+    type: String, 
+    enum: Object.values(TRANSACTION_TYPE_ENUM), 
+    required: true 
+  },
+  quantity: { type: Number, required: true },
+  unitCost: { type: Number },
+  fromLocation: { type: String, enum: Object.values(LOCATION_ENUM) },
+  toLocation: { type: String, enum: Object.values(LOCATION_ENUM) },
+  batchNumber: { type: String },
+  reference: { type: String },
+  notes: { type: String },
+  user: { type: Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now },
+}, { timestamps: false });
+
+// Indexes for performance
+inventoryTransactionSchema.index({ product: 1, createdAt: -1 });
+inventoryTransactionSchema.index({ product: 1, type: 1, toLocation: 1 });
+
+// Product Schema
 const productSchema = new Schema<IProduct>({
   name: { type: String, required: true },
   description: { type: String },
@@ -55,47 +114,376 @@ const productSchema = new Schema<IProduct>({
   batches: [batchSchema],
   totalQuantity: { type: Number, default: 0 },
   totalSold: { type: Number, default: 0 },
+  warehouseStock: { type: Number, default: 0 }, // Added to track warehouse stock
+  shopStock: { type: Number, default: 0 }, // Added to track shop stock
   category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
   sku: { type: String, unique: true },
   barcode: { type: String },
   imageUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-},{
-virtuals:true
+}, { 
+  virtuals: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Virtual fields for stock information
+// Virtual for availableStock
 productSchema.virtual('availableStock').get(function() {
-  return this.totalQuantity - this.totalSold;
+  return this.shopStock;
 });
 
-productSchema.virtual('inStock').get(function() {
-  return this.availableStock! > 0;
-});
-
+// Virtual for stockLevel
 productSchema.virtual('stockLevel').get(function() {
-  if (this.availableStock === 0) return 'out';
-  if (this.availableStock! <= 5) return 'low';
+  if (this.shopStock === 0) return 'out';
+  if (this.shopStock <= 5) return 'low';
   return 'high';
 });
 
-// Auto-update updatedAt before saving
+// Virtual for inStock
+productSchema.virtual('inStock').get(function() {
+  return this.shopStock > 0;
+});
+
+// Method to get stock by location
+productSchema.methods.getStockByLocation = async function(location: LocationType): Promise<number> {
+  // For performance, return the directly tracked value
+  if (location === 'warehouse') return this.warehouseStock;
+  if (location === 'shop') return this.shopStock;
+  
+  // Fallback to calculation if needed
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+  
+  const result = await InventoryTransaction.aggregate([
+    {
+      $match: { 
+        product: this._id,
+        $or: [
+          { toLocation: location },
+          { fromLocation: location }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalIn: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$toLocation', location] },
+              '$quantity',
+              0
+            ]
+          }
+        },
+        totalOut: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$fromLocation', location] },
+              { $multiply: ['$quantity', -1] }, // Fixed: use multiplication instead of abs
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]).exec();
+  
+  return (result[0]?.totalIn || 0) + (result[0]?.totalOut || 0);
+};
+
+// Method to get complete stock information
+productSchema.methods.getStockInfo = async function() {
+  // For performance, use the directly tracked values
+  const warehouseStock = this.warehouseStock;
+  const shopStock = this.shopStock;
+  const totalStock = warehouseStock + shopStock;
+  
+  return {
+    warehouseStock,
+    shopStock,
+    totalStock,
+    inStock: shopStock > 0,
+    stockLevel: shopStock === 0 ? 'out' : (shopStock <= 5 ? 'low' : 'high')
+  };
+};
+
+// Method to get average unit cost
+productSchema.methods.getAverageUnitCost = async function(): Promise<number> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+  
+  const result = await InventoryTransaction.aggregate([
+    {
+      $match: { 
+        product: this._id,
+        type: 'purchase'
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalCost: { $sum: { $multiply: ['$quantity', '$unitCost'] } },
+        totalQuantity: { $sum: '$quantity' }
+      }
+    }
+  ]).exec();
+  
+  if (!result.length || result[0].totalQuantity === 0) return 0;
+  return result[0].totalCost / result[0].totalQuantity;
+};
+
+// Method to record a purchase
+productSchema.methods.recordPurchase = async function(
+  quantity: number, 
+  unitCost: number, 
+  location: LocationType, 
+  batchNumber?: string, 
+  session?: any
+): Promise<IProduct> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+  
+  // Create a new batch record
+  const newBatch = {
+    purchaseDate: new Date(),
+    quantity,
+    unitCost,
+    batchNumber: batchNumber || `BATCH-${Date.now()}`
+  };
+  
+  // Add batch to product
+  this.batches.push(newBatch);
+  this.totalQuantity += quantity;
+  
+  // Update location-specific stock
+  if (location === 'warehouse') {
+    this.warehouseStock += quantity;
+  } else if (location === 'shop') {
+    this.shopStock += quantity;
+  }
+  
+  // Create inventory transaction
+  const purchaseTransaction = new InventoryTransaction({
+    product: this._id,
+    type: 'purchase',
+    quantity,
+    toLocation: location,
+    batchNumber: newBatch.batchNumber,
+    unitCost,
+    reference: `purchase-${Date.now()}`
+  });
+  
+  // Save both records
+  await purchaseTransaction.save({ session });
+  return this.save({ session });
+};
+
+// Method to record a transfer
+productSchema.methods.recordTransfer = async function(
+  quantity: number,
+  fromLocation: LocationType,
+  toLocation: LocationType,
+  session?: any
+): Promise<IProduct> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+
+  // Check if there's enough stock at the source location
+  const sourceStock = fromLocation === 'warehouse' ? this.warehouseStock : this.shopStock;
+  if (sourceStock < quantity) {
+    throw new Error(`Insufficient stock at ${fromLocation}. Available: ${sourceStock}, Requested: ${quantity}`);
+  }
+
+  // Update location-specific stock
+  if (fromLocation === 'warehouse') {
+    this.warehouseStock -= quantity;
+  } else if (fromLocation === 'shop') {
+    this.shopStock -= quantity;
+  }
+  
+  if (toLocation === 'warehouse') {
+    this.warehouseStock += quantity;
+  } else if (toLocation === 'shop') {
+    this.shopStock += quantity;
+  }
+
+  // Create transfer transaction
+  const transferTransaction = new InventoryTransaction({
+    product: this._id,
+    type: 'transfer',
+    quantity,
+    fromLocation,
+    toLocation,
+    reference: `transfer-${Date.now()}`
+  });
+
+  await transferTransaction.save({ session });
+  return this.save({ session });
+};
+
+// Method to record a sale
+productSchema.methods.recordSale = async function(
+  quantity: number, 
+  session?: any, 
+  userId?: mongoose.Types.ObjectId
+): Promise<IProduct> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+  
+  // Check if there's enough stock at the shop
+  if (this.shopStock < quantity) {
+    throw new Error(`Insufficient shop stock for ${this.name}. Shop: ${this.shopStock}, Requested: ${quantity}`);
+  }
+  
+  // Update stock
+  this.shopStock -= quantity;
+  this.totalQuantity -= quantity;
+  this.totalSold += quantity;
+  
+  // Create sale transaction
+  const saleTransaction = new InventoryTransaction({
+    product: this._id,
+    type: 'sale',
+    quantity: -quantity, // Negative for out
+    fromLocation: 'shop',
+    reference: `sale-${Date.now()}`,
+    user: userId
+  });
+  
+  // Save both records
+  await saleTransaction.save({ session });
+  return this.save({ session });
+};
+
+// Method to record a stock adjustment
+productSchema.methods.recordAdjustment = async function(
+  quantity: number,
+  location: LocationType,
+  reason?: string,
+  session?: any
+): Promise<IProduct> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+
+  // Update location-specific stock
+  if (location === 'warehouse') {
+    this.warehouseStock += quantity;
+  } else if (location === 'shop') {
+    this.shopStock += quantity;
+  }
+  
+  // Update total quantity
+  this.totalQuantity += quantity;
+
+  const adjustmentTransaction = new InventoryTransaction({
+    product: this._id,
+    type: 'adjustment',
+    quantity,
+    toLocation: location,
+    notes: reason,
+    reference: `adjustment-${Date.now()}`
+  });
+
+  await adjustmentTransaction.save({ session });
+  return this.save({ session });
+};
+
+// Method to recalculate stock from transactions
+productSchema.methods.recalculateStock = async function(): Promise<void> {
+  const InventoryTransaction = mongoose.model('InventoryTransaction') as Model<IInventoryTransaction>;
+  
+  // Calculate warehouse stock
+  const warehouseResult = await InventoryTransaction.aggregate([
+    {
+      $match: { 
+        product: this._id,
+        $or: [
+          { toLocation: 'warehouse' },
+          { fromLocation: 'warehouse' }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalIn: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$toLocation', 'warehouse'] },
+              '$quantity',
+              0
+            ]
+          }
+        },
+        totalOut: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$fromLocation', 'warehouse'] },
+              { $multiply: ['$quantity', -1] },
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]).exec();
+  
+  // Calculate shop stock
+  const shopResult = await InventoryTransaction.aggregate([
+    {
+      $match: { 
+        product: this._id,
+        $or: [
+          { toLocation: 'shop' },
+          { fromLocation: 'shop' }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalIn: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$toLocation', 'shop'] },
+              '$quantity',
+              0
+            ]
+          }
+        },
+        totalOut: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$fromLocation', 'shop'] },
+              { $multiply: ['$quantity', -1] },
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]).exec();
+  
+  // Update stock values
+  this.warehouseStock = (warehouseResult[0]?.totalIn || 0) + (warehouseResult[0]?.totalOut || 0);
+  this.shopStock = (shopResult[0]?.totalIn || 0) + (shopResult[0]?.totalOut || 0);
+  this.totalQuantity = this.warehouseStock + this.shopStock;
+  
+  await this.save();
+};
+
+// Pre-save middleware
 productSchema.pre('save', async function(next) {
   this.updatedAt = new Date();
   
-  // Calculate total quantity from batches
-  this.totalQuantity = this.batches.reduce((sum, batch) => sum + batch.quantity, 0);
+  // Calculate total quantity from location stocks
+  this.totalQuantity = this.warehouseStock + this.shopStock;
   
   // Auto-generate SKU only for new products
   if (this.isNew && !this.sku) {
-    const lastProduct = await mongoose.models.Product
+    const ProductModel = mongoose.model('Product') as Model<IProduct>;
+    const lastProduct = await ProductModel
       .findOne({})
       .sort({ createdAt: -1 })
       .select('sku');
     let nextNumber = 1;
     if (lastProduct && lastProduct.sku) {
-      // Handle SKU format with dash (e.g., "RN-01239")
       const lastNum = parseInt(lastProduct.sku.replace('RN-', ''), 10);
       if (!isNaN(lastNum)) {
         nextNumber = lastNum + 1;
@@ -106,40 +494,7 @@ productSchema.pre('save', async function(next) {
   next();
 });
 
-// Method to record a sale without modifying batches
-productSchema.methods.recordSale = async function(quantity: number, session?: any) {
-  // Check if there's enough stock
-  if (this.availableStock < quantity) {
-    throw new Error(`Insufficient stock for product: ${this.name}. Available: ${this.availableStock}, Requested: ${quantity}`);
-  }
-  
-  // Increase the total sold quantity
-  this.totalSold += quantity;
-  
-  // Save the product with the session if provided
-  if (session) {
-    return this.save({ session });
-  } else {
-    return this.save();
-  }
-};
-
-// Method to get available stock
-productSchema.methods.getAvailableStock = function() {
-  return this.availableStock;
-};
-
-// Method to get stock information
-productSchema.methods.getStockInfo = function() {
-  return {
-    totalQuantity: this.totalQuantity,
-    totalSold: this.totalSold,
-    availableStock: this.availableStock,
-    inStock: this.inStock,
-    stockLevel: this.stockLevel
-  };
-};
-
+// JSON transformation
 productSchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {
@@ -156,7 +511,13 @@ productSchema.set('toObject', {
   }
 });
 
-// Create the model
-const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);
+// Create models with proper typing
+const Product: Model<IProduct> = mongoose.models.Product || 
+  mongoose.model<IProduct>('Product', productSchema);
 
+const InventoryTransaction: Model<IInventoryTransaction> = mongoose.models.InventoryTransaction || 
+  mongoose.model<IInventoryTransaction>('InventoryTransaction', inventoryTransactionSchema);
+
+// Export models and enums
 export default Product;
+export { InventoryTransaction, LOCATION_ENUM, TRANSACTION_TYPE_ENUM };
