@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface StockTransfer {
+  unitCost: number;
   _id: string;
   product: {
+    batches: any;
     _id: string;
     name: string;
     sku: string;

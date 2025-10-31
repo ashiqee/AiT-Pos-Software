@@ -1,6 +1,6 @@
 // app/api/inventory/transfers/route.ts
 import { dbConnect } from "@/lib/db/dbConnect";
-import Product from "@/models/product";
+import Product, { InventoryTransaction } from "@/models/product";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../auth/[...nextauth]/authOptions";
@@ -16,69 +16,45 @@ export async function GET(request: NextRequest) {
     const location = searchParams.get("location");
 
     // Build query
-    const query: any = {};
+    const query: any = { type: "transfer" };
+    
     if (status && status !== "all") {
       query.status = status;
     }
+    
     if (location && location !== "all") {
       query.$or = [{ fromLocation: location }, { toLocation: location }];
     }
 
     const skip = (page - 1) * limit;
 
-    // Get transfers
-    const transfers = await Product.aggregate([
-      { $unwind: "$inventoryTransactions" },
-      { $match: { "inventoryTransactions.type": "transfer", ...query } },
-      { $sort: { "inventoryTransactions.createdAt": -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id",
-          foreignField: "_id",
-          as: "product",
-        },
-      },
-      { $unwind: "$product" },
-      {
-        $project: {
-          _id: "$inventoryTransactions._id",
-          product: {
-            _id: "$product._id",
-            name: "$product.name",
-            sku: "$product.sku",
-            imageUrl: "$product.imageUrl",
-          },
-          fromLocation: "$inventoryTransactions.fromLocation",
-          toLocation: "$inventoryTransactions.toLocation",
-          quantity: "$inventoryTransactions.quantity",
-          status: "$inventoryTransactions.status",
-          reference: "$inventoryTransactions.reference",
-          notes: "$inventoryTransactions.notes",
-          createdAt: "$inventoryTransactions.createdAt",
-          completedAt: "$inventoryTransactions.completedAt",
-          user: "$inventoryTransactions.user",
-        },
-      },
-    ]);
+    // Get transfers with product information
+    const transfers = await InventoryTransaction.find(query)
+      .populate({
+        path: 'product',
+        select: 'name sku imageUrl batches',
+        model: 'Product'
+      })
+      .populate({
+        path: 'user',
+        select: 'name email',
+        model: 'User'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     // Get total count
-    const totalCount = await Product.aggregate([
-      { $unwind: "$inventoryTransactions" },
-      { $match: { "inventoryTransactions.type": "transfer", ...query } },
-      { $count: "total" },
-    ]);
+    const totalCount = await InventoryTransaction.countDocuments(query);
 
-    const totalPages = Math.ceil((totalCount[0]?.total || 0) / limit);
-
+    const totalPages = Math.ceil(totalCount / limit);
+    
     return NextResponse.json({
       transfers,
       pagination: {
         currentPage: page,
         totalPages,
-        totalCount: totalCount[0]?.total || 0,
+        totalCount,
         limit,
         hasNext: page < totalPages,
         hasPrev: page > 1,
