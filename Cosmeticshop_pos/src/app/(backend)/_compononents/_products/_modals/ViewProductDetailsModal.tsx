@@ -18,6 +18,8 @@ interface Batch {
 }
 
 interface Product {
+  warehouseStock: number;
+  shopStock: number;
   _id: string;
   name: string;
   description: string;
@@ -156,7 +158,8 @@ export default function ViewProductDetailsModal({ product }: ViewProductDetailsM
                           <div className="flex items-center gap-2">
                             <Package size={16} className="text-gray-500" />
                             <span className="text-sm text-gray-500">Available Stock:</span>
-                            <span className="font-medium">{product.availableStock}</span>
+                            <span className="font-medium">shop:{product.shopStock}</span>
+                            <span className="font-medium">warehouse:{product.warehouseStock}</span>
                           </div>
                           
                           <div className="flex items-center gap-2">

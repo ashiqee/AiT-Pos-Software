@@ -197,10 +197,10 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      if (product.availableStock! < item.quantity) {
+      if (product.shopStock! < item.quantity) {
         return NextResponse.json(
           {
-            error: `Insufficient stock for product: ${product.name}. Available: ${product.availableStock}, Requested: ${item.quantity}`,
+            error: `Insufficient stock for product: ${product.name}. Available: ${product.shopStock}, Requested: ${item.quantity}`,
           },
           { status: 400 }
         );

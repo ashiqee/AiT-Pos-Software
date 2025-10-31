@@ -198,7 +198,7 @@ const Menu = (props: MenuProps<any, false, GroupBase<any>>) => {
       {props.children}
       {inputValue && (
         <div className="px-3 py-2 text-xs text-gray-500 border-t">
-          Showing results for "{inputValue}"
+          Showing results for  &#34;{inputValue} &#34;
         </div>
       )}
     </components.Menu>

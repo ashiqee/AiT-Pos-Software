@@ -41,7 +41,7 @@ export default function ViewPurchaseDetailsModal({ purchase }: ViewPurchaseDetai
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'BDT'
     }).format(amount);
   };
 
@@ -67,7 +67,7 @@ export default function ViewPurchaseDetailsModal({ purchase }: ViewPurchaseDetai
       <Modal 
         isOpen={isOpen} 
         onClose={onClose} 
-        size="3xl"
+        size="5xl"
         scrollBehavior="inside"
       >
         <ModalContent>
@@ -151,6 +151,7 @@ export default function ViewPurchaseDetailsModal({ purchase }: ViewPurchaseDetai
                           <TableColumn>PURCHASE DATE</TableColumn>
                           <TableColumn>SUPPLIER</TableColumn>
                           <TableColumn className="text-right">QTY</TableColumn>
+                          <TableColumn className="text-right">Location</TableColumn>
                           <TableColumn className="text-right">UNIT COST</TableColumn>
                           <TableColumn className="text-right">TOTAL</TableColumn>
                         </TableHeader>
@@ -174,6 +175,7 @@ export default function ViewPurchaseDetailsModal({ purchase }: ViewPurchaseDetai
                                   <span>{batch.supplier || 'N/A'}</span>
                                 </div>
                               </TableCell>
+                              <TableCell className="text-right">{batch.quantity}</TableCell>
                               <TableCell className="text-right">{batch.quantity}</TableCell>
                               <TableCell className="text-right">
                                 {formatCurrency(batch.unitCost)}

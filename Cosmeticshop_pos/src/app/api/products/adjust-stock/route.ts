@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       product: {
         id: product._id,
         name: product.name,
-        newStock: product.totalQuantity
+        
       }
     });
   } catch (error) {

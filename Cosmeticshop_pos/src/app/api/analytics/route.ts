@@ -306,10 +306,10 @@ async function getProductInsights() {
   ]);
 
   const lowStockCount = products.filter(
-  (p) => (p.availableStock ?? 0) > 0 && (p.availableStock ?? 0) <= 5
+  (p) => (p.warehouseStock ?? 0) > 0 && (p.warehouseStock ?? 0) <= 5
 ).length;
 
-  const outOfStockCount = products.filter(p => p.availableStock === 0).length;
+  const outOfStockCount = products.filter(p => p.warehouseStock === 0).length;
 
   // Calculate average profit margin (would need cost data)
   const averageProfitMargin = 25; // Placeholder

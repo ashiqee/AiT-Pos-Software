@@ -39,6 +39,7 @@ import { addToast, NumberInput, ScrollShadow } from "@heroui/react";
 import { ThemeSwitch } from "@/components/theme-switch";
 
 interface CartProduct {
+  shopStock: number;
   _id: string;
   name: string;
   imageUrl: string;
@@ -420,7 +421,7 @@ export default function POSPagePP() {
                                     variant="light"
                                     isDisabled={
                                       item.quantity >=
-                                      item.product.availableStock
+                                      item.product.shopStock
                                     }
                                     onPress={() =>
                                       updateQuantity(

@@ -343,7 +343,7 @@ export default function EditProductModal({
                     <Card className="shadow-sm border-1 border-gray-200 dark:border-gray-700">
                       <CardHeader className="bg-gray-50 dark:bg-gray-800/50 py-3">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <div className="w-1 h-6 bg-primary rounded-full"></div>
+                          <div className="w-1 h-6 bg-primary rounded-full"/>
                           Product Information
                         </h3>
                       </CardHeader>
@@ -504,7 +504,7 @@ export default function EditProductModal({
                     <Card className="shadow-sm border-1 border-gray-200 dark:border-gray-700">
                       <CardHeader className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 flex justify-between items-center">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <div className="w-1 h-6 bg-primary rounded-full"></div>
+                          <div className="w-1 h-6 bg-primary rounded-full"/>
                           Inventory Batches
                         </h3>
                         <Button

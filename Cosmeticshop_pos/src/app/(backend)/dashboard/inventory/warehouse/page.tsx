@@ -285,8 +285,8 @@ export default function FixDoubleStock() {
                             </p>
                             <p className="text-xs text-warning-700 mt-1">
                               Some products have double-counted warehouse stock. 
-                              The "Correct Stock" column shows the actual stock based on batches.
-                              Update the "Current Stock" to match the correct values.
+                              The &#34;Correct Stock &#34; column shows the actual stock based on batches.
+                              Update the &#34;Current Stock &#34; to match the correct values.
                             </p>
                           </div>
                         </CardBody>

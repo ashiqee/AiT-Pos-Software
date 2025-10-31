@@ -1,76 +1,36 @@
 // app/api/purchases/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/authOptions';
-import { dbConnect } from '@/lib/db/dbConnect';
-import Product from '@/models/product';
-import purchase from '@/models/purchase';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import { dbConnect } from "@/lib/db/dbConnect";
+import Purchase from "@/models/purchase";
+import Product from "@/models/product";
 
-
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
     await dbConnect();
-    const body = await request.json();
-    const { items, subtotal, tax, total, invoiceNumber, notes } = body;
-
-    // Validate all products exist
-    const productIds = items.map((item: any) => item.product);
-    const products = await Product.find({ '_id': { $in: productIds } });
+    const session = await getServerSession(authOptions);
     
-    if (products.length !== productIds.length) {
-      return NextResponse.json(
-        { error: 'One or more products not found' },
-        { status: 400 }
-      );
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create a map for easy product lookup
-    const productMap = new Map();
-    products.forEach((product: any) => {
-      productMap.set(product._id.toString(), product);
-    });
+    const { items, subtotal, tax, total, invoiceNumber, notes } = await req.json();
 
-    // Process each item to add to inventory
-    const processedItems = [];
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: "No items in purchase" }, { status: 400 });
+    }
+
+    // Validate each item
     for (const item of items) {
-      const product = productMap.get(item.product);
-      
-      if (!product) {
-        return NextResponse.json(
-          { error: `Product not found: ${item.product}` },
-          { status: 400 }
-        );
+      if (!item.product || !item.quantity || !item.unitCost || !item.location) {
+        return NextResponse.json({ error: "Missing required fields in purchase items" }, { status: 400 });
       }
-
-      // Generate batch number if not provided
-      const batchNumber = item.batchNumber || `BATCH-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-
-      // Add a new batch to the product
-      product.batches.push({
-        purchaseDate: item.purchaseDate || new Date(),
-        quantity: item.quantity,
-        unitCost: item.unitCost,
-        supplier: item.supplier,
-        batchNumber: batchNumber,
-      });
-      await product.save();
-
-      // Prepare the item for the purchase record with the batch number
-      processedItems.push({
-        ...item,
-        batchNumber: batchNumber,
-      });
     }
 
     // Create the purchase record
-    const resPurchase = new purchase({
-      items: processedItems,
+    const purchase = new Purchase({
+      items,
       subtotal,
       tax,
       total,
@@ -78,19 +38,43 @@ export async function POST(request: NextRequest) {
       notes,
       user: session.user.id,
     });
-    
-    await resPurchase.save();
-    
-    return NextResponse.json(resPurchase);
-  } catch (error) {
-    console.error('Purchase API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process purchase' },
-      { status: 500 }
-    );
+
+    // Process each item to update product inventory
+    for (const item of items) {
+      try {
+        const product = await Product.findById(item.product);
+        if (!product) {
+          throw new Error(`Product not found: ${item.product}`);
+        }
+
+        // Record the purchase with the specified location
+        await product.recordPurchase(
+          item.quantity,
+          item.unitCost,
+          item.location,
+          item.batchNumber
+        );
+      } catch (error: any) {
+        console.error(`Error processing purchase item: ${error.message}`);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+    }
+
+    // Save the purchase record
+    await purchase.save();
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Purchase processed successfully",
+      purchase 
+    });
+  } catch (error: any) {
+    console.error("Error processing purchase:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
+// GET endpoint for fetching purchases
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();

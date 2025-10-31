@@ -5,9 +5,10 @@ const purchaseItemSchema = new Schema({
   product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
   quantity: { type: Number, required: true },
   unitCost: { type: Number, required: true },
-  supplier: { type: String, required: true },
+  supplier: { type: String, default:"xyz" },
   batchNumber: { type: String},
   purchaseDate: { type: Date, default: Date.now },
+  location: { type: String, enum: ['warehouse', 'shop'], required: true }, // Add location field
 });
 
 const purchaseSchema = new Schema({

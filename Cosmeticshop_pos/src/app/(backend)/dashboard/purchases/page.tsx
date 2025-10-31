@@ -6,6 +6,7 @@ import { Button } from "@heroui/button";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Divider } from "@heroui/divider";
+import { Select, SelectItem } from "@heroui/select";
 import {
   Table,
   TableHeader,
@@ -21,14 +22,18 @@ import {
   Save,
   Package,
   Search,
+  Warehouse,
+  Store,
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {  NumberInput, ScrollShadow } from "@heroui/react";
+import { NumberInput, ScrollShadow } from "@heroui/react";
 import Image from "next/image";
 
 interface Product {
+  shopStock: number;
+  warehouseStock: number;
   _id: string;
   name: string;
   sku: string;
@@ -46,6 +51,7 @@ interface PurchaseItem {
   supplier: string;
   batchNumber?: string;
   purchaseDate: Date;
+  location: 'warehouse' | 'shop'; // Add location field
 }
 
 export default function PurchasePage() {
@@ -57,9 +63,8 @@ export default function PurchasePage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [taxRate, setTaxRate] = useState(0);
+  const [defaultLocation, setDefaultLocation] = useState<'warehouse' | 'shop'>('warehouse'); // Add default location state
   const router = useRouter();
-
- 
 
   // Fetch products
   const fetchProducts = async (search = "") => {
@@ -97,7 +102,6 @@ export default function PurchasePage() {
       return;
     }
 
-
     setPurchaseItems([
       ...purchaseItems,
       {
@@ -106,6 +110,7 @@ export default function PurchasePage() {
         unitCost: 0,
         supplier: supplier,
         purchaseDate: new Date(),
+        location: defaultLocation, // Use default location
       },
     ]);
   };
@@ -151,6 +156,15 @@ export default function PurchasePage() {
     );
   };
 
+  // Update location in purchase list
+  const updateLocation = (productId: string, location: 'warehouse' | 'shop') => {
+    setPurchaseItems(
+      purchaseItems.map((item) =>
+        item.product._id === productId ? { ...item, location } : item
+      )
+    );
+  };
+
   // Remove item from purchase list
   const removeFromPurchase = (productId: string) => {
     setPurchaseItems(
@@ -173,11 +187,8 @@ export default function PurchasePage() {
       return;
     }
 
-    
-    
     // Validate all items
     for (const item of purchaseItems) {
-        console.log(item);
       if (item.unitCost <= 0) {
         toast.error(`Unit cost must be greater than 0 for ${item.product.name}`);
         return;
@@ -186,10 +197,7 @@ export default function PurchasePage() {
         toast.error(`Quantity must be greater than 0 for ${item.product.name}`);
         return;
       }
-      if (!supplier) {
-        toast.error(`Supplier is required for ${item.product.name}`);
-        return;
-      }
+      
     }
 
     setIsProcessing(true);
@@ -199,9 +207,10 @@ export default function PurchasePage() {
           product: item.product._id,
           quantity: item.quantity,
           unitCost: item.unitCost,
-          supplier: supplier,
+          supplier: item.supplier,
           batchNumber: item.batchNumber || "",
           purchaseDate: item.purchaseDate,
+          location: item.location, // Include location in the API call
         })),
         subtotal,
         tax,
@@ -236,7 +245,7 @@ export default function PurchasePage() {
   };
 
   return (
-    <div >
+    <div>
       <div className="mb-4">
         <h1 className="lg:text-2xl text-md font-bold">Product Purchase</h1>
         <p className="text-gray-600 text-xs">Restock products by creating a purchase order</p>
@@ -244,7 +253,7 @@ export default function PurchasePage() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Products Section */}
-        <div className="lg:w-2/3 ">
+        <div className="lg:w-2/3">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -260,61 +269,64 @@ export default function PurchasePage() {
                 </div>
               </div>
             </CardHeader>
-              <ScrollShadow hideScrollBar className="md:h-[380px] h-60 2xl:h-[72vh]">
-            <CardBody >
- <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-                {products.map((product) => (
-                  <Card
-                    key={product._id}
-                    isPressable
-                    className="cursor-pointer hover:shadow rounded-md "
-                    onPress={() => addToPurchase(product)}
-                  >
-                    <CardBody className="p-4 ">
-                      <div className="flex justify-between items-start">
-                        <div className="w-full">
-                          <h3 className="font-medium text-xs">{product.name}</h3>
-                          <p className="text-md text-sky-600">SKU: {product.sku}</p>
-                          <p className="text-xs hidden text-gray-600">Barcode: {product.barcode}</p>
-                        {product.category.name &&  <p className="text-xs text-gray-600">
-                            Category: {product.category.name}
-                          </p>
-                            }
-                          <p className="font-bold text-xs mt-1">
-                            Selling Price: &#x09F3;{product.sellingPrice.toFixed(2)}
-                          </p>
-                          <p className="text-xs mt-1">
-                            Current Stock: {product.availableStock}
-                          </p>
+            <ScrollShadow hideScrollBar className="md:h-[380px] h-60 2xl:h-[72vh]">
+              <CardBody>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {products.map((product) => (
+                    <Card
+                      key={product._id}
+                      isPressable
+                      className="cursor-pointer hover:shadow rounded-md"
+                      onPress={() => addToPurchase(product)}
+                    >
+                      <CardBody className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="w-full">
+                            <h3 className="font-medium text-xs">{product.name}</h3>
+                            <p className="text-md text-sky-600">SKU: {product.sku}</p>
+                            <p className="text-xs hidden text-gray-600">Barcode: {product.barcode}</p>
+                            {product.category.name && (
+                              <p className="text-xs text-gray-600">
+                                Category: {product.category.name}
+                              </p>
+                            )}
+                            <p className="font-bold text-xs mt-1">
+                              Selling Price: &#x09F3;{product.sellingPrice.toFixed(2)}
+                            </p>
+                            <div className="flex justify-between mt-1">
+                              <p className="text-xs">
+                                Warehouse: {product.warehouseStock}
+                              </p>
+                              <p className="text-xs">
+                                Shop: {product.shopStock || 0}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col justify-center items-center">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="primary"
+                              onPress={() => addToPurchase(product)}
+                            >
+                              <Plus size={16} />
+                            </Button>
+                            <Image
+                              width={400}
+                              height={400}
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-12 rounded-md z-0 h-12 object-cover"
+                            />
+                          </div>
                         </div>
-                     <div className="flex flex-col justify-center items-center">
-                           <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          color="primary"
-                          onPress={() => addToPurchase(product)}
-                        >
-                          <Plus size={16} />
-                        </Button>
-                        <Image
-                        width={400} 
-                        height={400}
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-12 rounded-md z-0 h-12 object-cover"
-                       
-                        />
-                     </div>
-
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
-             
-            </CardBody>
-              </ScrollShadow>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </div>
+              </CardBody>
+            </ScrollShadow>
           </Card>
         </div>
 
@@ -343,18 +355,29 @@ export default function PurchasePage() {
                       value={supplier}
                       onValueChange={setSupplier}
                     />
-                     <Input
-                     
+                    <Input
                       label="Invoice Number"
                       placeholder="Enter invoice number"
                       value={invoiceNumber}
                       onValueChange={setInvoiceNumber}
                     />
                   </div>
-                  
+
                   <div className="mb-4 flex gap-3">
+                    <Select
+                      label="Default Location"
+                      selectedKeys={[defaultLocation]}
+                      onSelectionChange={(keys) => setDefaultLocation(Array.from(keys)[0] as 'warehouse' | 'shop')}
+                    >
+                      <SelectItem key="warehouse" startContent={<Warehouse size={16} />}>
+                        Warehouse
+                      </SelectItem>
+                      <SelectItem key="shop" startContent={<Store size={16} />}>
+                        Shop
+                      </SelectItem>
+                    </Select>
                     <NumberInput
-                    hideStepper
+                      hideStepper
                       label="Tax Rate (%)"
                       placeholder="Enter tax rate"
                       type="number"
@@ -363,128 +386,141 @@ export default function PurchasePage() {
                       defaultValue={taxRate}
                       onValueChange={(value) => setTaxRate(value || 0)}
                     />
-
-                      
-                    <Input
-                      label="Notes"
-                      size="sm"
-                      placeholder="Enter notes (optional)"
-                      value={notes}
-                      onValueChange={setNotes}
-                    />
-                  
                   </div>
-               
-                  <Divider className="my-4" />
-                  <div >
-                    <ScrollShadow hideScrollBar className="h-96 overflow-y-auto">
-                    <Table isHeaderSticky aria-label="Purchase items" radius="sm">
-                      <TableHeader>
-                        <TableColumn>Product</TableColumn>
-                        <TableColumn>Qty</TableColumn>
-                        <TableColumn>Cost</TableColumn>
-                        <TableColumn>Total</TableColumn>
-                        <TableColumn>Action</TableColumn>
-                      </TableHeader>
-                      
- <TableBody >
-                        {purchaseItems.map((item) => (
-                          <TableRow
-  key={item.product._id}
 
->
-                            <TableCell>
-                              <div>
-                                <div className="font-medium text-sm">
-                                  {item.product.name}
+                  <Input
+                    label="Notes"
+                    size="sm"
+                    placeholder="Enter notes (optional)"
+                    value={notes}
+                    onValueChange={setNotes}
+                    className="mb-4"
+                  />
+
+                  <Divider className="my-4" />
+                  <div>
+                    <ScrollShadow hideScrollBar className="h-96 overflow-y-auto">
+                      <Table isHeaderSticky aria-label="Purchase items" radius="sm">
+                        <TableHeader>
+                          <TableColumn>Product</TableColumn>
+                          <TableColumn>Qty</TableColumn>
+                          <TableColumn>Cost</TableColumn>
+                          <TableColumn>Location</TableColumn>
+                          <TableColumn>Total</TableColumn>
+                          <TableColumn>Action</TableColumn>
+                        </TableHeader>
+
+                        <TableBody>
+                          {purchaseItems.map((item) => (
+                            <TableRow key={item.product._id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium text-sm">
+                                    {item.product.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {item.product.sku}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  {item.product.sku}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    onPress={() =>
+                                      updateQuantity(
+                                        item.product._id,
+                                        item.quantity - 1
+                                      )
+                                    }
+                                  >
+                                    <Minus size={16} />
+                                  </Button>
+                                  <Input
+                                    min={1}
+                                    size="sm"
+                                    value={item.quantity.toString()}
+                                    onValueChange={(value) =>
+                                      updateQuantity(
+                                        item.product._id,
+                                        parseFloat(value) || 1
+                                      )
+                                    }
+                                    className="w-12 text-center"
+                                  />
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    onPress={() =>
+                                      updateQuantity(
+                                        item.product._id,
+                                        item.quantity + 1
+                                      )
+                                    }
+                                  >
+                                    <Plus size={16} />
+                                  </Button>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  isIconOnly
+                              </TableCell>
+                              <TableCell>
+                                <NumberInput
+                                  hideStepper
+                                  type="number"
+                                  minValue={0}
                                   size="sm"
-                                  variant="light"
-                                  onPress={() =>
-                                    updateQuantity(
-                                      item.product._id,
-                                      item.quantity - 1
-                                    )
-                                  }
-                                >
-                                  <Minus size={16} />
-                                </Button>
-                                <Input
-                                
-                                  
-                                  min={1}
-                                  size="sm"
-                                  value={item.quantity.toString()}
+                                  defaultValue={item.unitCost}
                                   onValueChange={(value) =>
-                                    updateQuantity(
+                                    updateUnitCost(
                                       item.product._id,
-                                      parseFloat(value) || 1
+                                      value || 0
                                     )
                                   }
-                                  className="w-12 text-center"
+                                  className="w-20"
+                                  startContent="&#x09F3;"
                                 />
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  size="sm"
+                                  selectedKeys={[item.location]}
+                                  onSelectionChange={(keys) =>
+                                    updateLocation(
+                                      item.product._id,
+                                      Array.from(keys)[0] as 'warehouse' | 'shop'
+                                    )
+                                  }
+                                  className="w-24"
+                                >
+                                  <SelectItem key="warehouse">
+                                    Warehouse
+                                  </SelectItem>
+                                  <SelectItem key="shop">
+                                    Shop
+                                  </SelectItem>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                &#x09F3;{(item.unitCost * item.quantity).toFixed(2)}
+                              </TableCell>
+                              <TableCell>
                                 <Button
                                   isIconOnly
                                   size="sm"
                                   variant="light"
-                                  onPress={() =>
-                                    updateQuantity(
-                                      item.product._id,
-                                      item.quantity + 1
-                                    )
-                                  }
+                                  color="danger"
+                                  onPress={() => removeFromPurchase(item.product._id)}
                                 >
-                                  <Plus size={16} />
+                                  <Trash2 size={16} />
                                 </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <NumberInput
-                              hideStepper
-                                type="number"
-                                minValue={0}
-                                size="sm"
-                            
-                                defaultValue={item.unitCost}
-                                onValueChange={(value) =>
-                                  updateUnitCost(
-                                    item.product._id,
-                                    value || 0
-                                  )
-                                }
-                                className="w-20"
-                                startContent="&#x09F3;"
-                              />
-                            </TableCell>
-                            <TableCell>
-                                  &#x09F3;{(item.unitCost * item.quantity).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                isIconOnly
-                                size="sm"
-                                variant="light"
-                                color="danger"
-                                onPress={() => removeFromPurchase(item.product._id)}
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>     
-                     
-                    </Table>
-                      </ScrollShadow>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollShadow>
                   </div>
                   <Divider className="my-4" />
                   <div className="space-y-2">

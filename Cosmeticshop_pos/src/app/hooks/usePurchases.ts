@@ -1,23 +1,36 @@
+// hooks/usePurchases.ts
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface Purchase {
+  totalCost: any;
+  totalQuantity: any;
+  batches: any;
+  product: any;
   _id: string;
-  product: {
-    _id: string;
-    name: string;
-    sku: string;
-    category: { name: string };
-  };
-  batches: Array<{
-    purchaseDate: string;
+  items: Array<{
+    product: {
+      _id: string;
+      name: string;
+      sku: string;
+      category: { name: string };
+    };
     quantity: number;
     unitCost: number;
     supplier: string;
     batchNumber: string;
+    location: 'warehouse' | 'shop'; // Add location field
+    purchaseDate: string;
   }>;
-  totalQuantity: number;
-  totalCost: number;
+  subtotal: number;
+  tax: number;
+  total: number;
+  invoiceNumber: string;
+  notes: string;
+  user: {
+    _id: string;
+    name: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
